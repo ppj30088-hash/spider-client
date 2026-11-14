@@ -1,0 +1,133 @@
+name: Android build
+description: >-
+  Shared build steps of ci.yml and release.yml (preview and stable): JDK 17, Flutter module AAR (the gitignored
+  flutter/build/host/outputs/repo the app links), ThroneCore AAR + sing-box schema, routeprofiles
+  snapshot, sing-box dashboard, Gradle, then ./gradlew <tasks>. With sign=true, release builds are signed with the
+  SIGNING_* secrets from the job environment; the build fails without them.
+inputs:
+  tasks:
+    description: Gradle tasks to run
+    required: true
+  channel:
+    description: stable or preview (BuildConfig.PREVIEW, versionName suffix -pre.<build-number>)
+    required: false
+    default: stable
+  build-number:
+    description: last three digits of versionCode (999 stable tag build, commits since the last stable tag for previews)
+    required: false
+    default: '0'
+  sign:
+    description: sign release builds (true/false)
+    required: false
+    default: 'false'
+  reuse-inputs:
+    description: >-
+      Skip the four input-preparation steps (Flutter AAR, ThroneCore, routeprofiles,
+      dashboard) because Release downloaded the CI-built inputs. Fails fast if any
+      input is missing, so a partial artifact can never produce a broken APK.
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Setup Java
+      uses: actions/setup-java@v6
+      with:
+        distribution: temurin
+        java-version: '17'
+        cache: gradle
+    # The NDK the app's ndkVersion asks for, installed before the Flutter AAR: without it the
+    # first Gradle build auto-installs it mid-build, where a truncated dl.google.com download
+    # (seen 2026-11-02) fails the run with no retry. Three tries ride out a flaky CDN.
+    - name: Install NDK
+      shell: bash
+      run: |
+        set -euo pipefail
+        for attempt in 1 2 3; do
+          # printf, not yes: `yes |` dies of a broken pipe when sdkmanager stops reading,
+          # and with pipefail that reads as a failure even after a clean install. Four y's
+          # cover a runner image that ever ships more than one unaccepted license.
+          if printf 'y\ny\ny\ny\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;28.2.13676358"; then
+            break
+          fi
+          if [ "$attempt" = "3" ]; then
+            echo "::error::NDK 28.2.13676358 failed to install three times"
+            exit 1
+          fi
+          sleep 20
+        done
+    # The app links io.flrone.ui:flutter_release:1.0 from flutter/build/host/outputs/repo, which the
+    # repository ignores; without this step the Gradle build cannot resolve the B-box interface at all.
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        # Pinned to the toolchain the AAR is developed against; `flutter --version` on the dev box is the source.
+        flutter-version: '3.47.9'
+        cache: true
+    - name: Flutter AAR
+      if: inputs.reuse-inputs != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd flutter
+        flutter pub get
+        flutter build aar --no-debug --no-profile
+    - name: ThroneCore AAR and schema
+      if: inputs.reuse-inputs != 'true'
+      uses: ./.github/actions/throne-core
+    - name: Fetch routeprofiles snapshot
+      if: inputs.reuse-inputs != 'true'
+      uses: ./.github/actions/routeprofiles
+    - name: Fetch sing-box dashboard
+      if: inputs.reuse-inputs != 'true'
+      uses: ./.github/actions/sing-box-dashboard
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v6
+      with:
+        cache-provider: basic
+    - name: Verify reused build inputs
+      if: inputs.reuse-inputs == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        missing=0
+        check() {
+          if [ ! -e "$1" ]; then
+            echo "::error::reused build input is missing: $1"
+            missing=1
+          fi
+        }
+        check flutter/build/host/outputs/repo
+        check app/libs/ThroneCore.aar
+        check app/src/main/assets/schema/sing-box.json
+        check app/src/main/assets/routeprofiles/srslist.h
+        check app/src/main/assets/sb-dashboard
+        [ "$missing" = 0 ] || exit 1
+        echo "Reused CI build inputs are complete."
+    - name: Gradle build
+      shell: bash
+      env:
+        THRONE_CHANNEL: ${{ inputs.channel }}
+        THRONE_BUILD: ${{ inputs.build-number }}
+        THRONE_SIGN: ${{ inputs.sign }}
+      run: |
+        set -euo pipefail
+        if [ "$THRONE_SIGN" = "true" ]; then
+          if [ -n "${SIGNING_KEYSTORE_B64:-}" ]; then
+            : "${SIGNING_STORE_PASSWORD:?the SIGNING_STORE_PASSWORD secret is missing}"
+            : "${SIGNING_KEY_ALIAS:?the SIGNING_KEY_ALIAS secret is missing}"
+            KS="$RUNNER_TEMP/release-signing.keystore"
+            printf '%s' "$SIGNING_KEYSTORE_B64" | base64 --decode --ignore-garbage > "$KS"
+            UPDATE_SIGNER_SHA256=$(keytool -exportcert -keystore "$KS" -storepass "$SIGNING_STORE_PASSWORD" \
+              -alias "$SIGNING_KEY_ALIAS" | sha256sum | cut -d' ' -f1)
+            rm -f "$KS"
+            export UPDATE_SIGNER_SHA256
+            echo "Signing with the release key from the repository secrets (certificate SHA-256 $UPDATE_SIGNER_SHA256)"
+          else
+            echo "::error::No signing key: add the SIGNING_* repository secrets"
+            exit 1
+          fi
+        else
+          unset SIGNING_KEYSTORE_B64 SIGNING_STORE_PASSWORD SIGNING_KEY_ALIAS SIGNING_KEY_PASSWORD
+        fi
+        ./gradlew --stacktrace ${{ inputs.tasks }}

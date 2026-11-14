@@ -1,0 +1,20 @@
+include: package:flutter_lints/flutter.yaml
+analyzer:
+  exclude:
+    - lib/ui/generated/**
+    # Generated FFI bindings: lint rules are enforced on the generator template
+    # instead (tools/bindgen/bindgen.py), not waived file-wide.
+    - lib/core/throne_ffi.dart
+    - build/**
+    - android/**
+    - ios/**
+
+linter:
+  rules:
+    # The vendored prism layer keeps constructor bodies readable with named
+    # parameters; upstream does not enforce this rule either.
+    prefer_initializing_formals: false
+    # Prism's AlertDialog and BoxPage read title → actions → body, because the
+    # action row is part of the frame rather than trailing content. Ordering
+    # `child` last for the linter's sake would separate the two related halves.
+    sort_child_properties_last: false

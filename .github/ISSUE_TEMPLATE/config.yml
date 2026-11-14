@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a bug (GitHub Issues)
+    url: https://github.com/ppj30088-hash/spider-client/issues
+    about: Please use the bug / feature templates; update to the latest version first, and attach an exported log with sensitive information removed.
+  - name: Report a security issue (do not open a public issue)
+    url: https://github.com/ppj30088-hash/spider-client/security/advisories/new
+    about: Please report vulnerabilities privately through GitHub Security Advisories, not in a public issue.

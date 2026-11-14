@@ -1,0 +1,41 @@
+name: flrone
+description: Spider Client's Flutter interface, built on the FlClash presentation layer and sing-box services.
+publish_to: none
+version: 1.0.0+1
+environment:
+  sdk: '>=3.13.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  ffi: 2.1.0
+  material_ui: 1.5.0
+  collection: 1.19.1
+  freezed_annotation: 3.1.0
+  material_color_utilities: 0.13.0
+  material_new_shapes: 1.0.0
+  path_parsing: 1.1.0
+  super_sliver_list: 0.4.1
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  flutter_lints: 6.0.0
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/fonts/
+    - assets/licenses/
+    - assets/schema/
+  shaders:
+    - shaders/liquid_glass.frag
+    - shaders/ink_sparkle.frag
+  fonts:
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+  module:
+    androidX: true
+    androidPackage: io.flrone.ui
+    iosBundleIdentifier: io.flrone.ui
