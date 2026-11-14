@@ -115,7 +115,9 @@ void main() {
 
   testWidgets('the add-rule fields keep a keyboard that can paste', (tester) async {
     await mount(tester);
-    openPage(tester.element(find.byType(HomePage)), const RoutingPage());
+    // The add-rule sheet belongs to the shared pool's screen now, not to the
+    // profile cards the Routing page draws.
+    openPage(tester.element(find.byType(HomePage)), const GlobalRulesPage());
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Add rule'));

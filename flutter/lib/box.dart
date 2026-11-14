@@ -501,10 +501,14 @@ class BoxController extends ChangeNotifier {
 
   void clearApplyRequired() { applyRequired = null; _notify([BoxAspect.state]); }
 
+  /// Runs a bridge action and reports its reply. A boolean reply is the host's
+  /// own verdict (`groups.testSession.start` answers false when a session is
+  /// already running), so it is returned as-is rather than flattened to true.
+  /// Any other reply means the call completed without throwing.
   Future<bool> act(String method, [Json? args]) async {
     try {
-      await call(method, args);
-      return true;
+      final reply = await call(method, args);
+      return reply is bool ? reply : true;
     } catch (error) {
       report(error);
       return false;
