@@ -112,7 +112,10 @@ class XrayFirstTest {
 
     @Test
     fun `trojan without tls stays on sing-box`() {
-        val link = "trojan://password@example.com:443#Trojan-Plain"
+        // security=none keeps the profile TLS-less (so it stays on sing-box) without
+        // tripping the no-TLS warning, whose localised message plain JVM tests cannot
+        // build (it reads the app, which is never started here).
+        val link = "trojan://password@example.com:443?security=none#Trojan-Plain"
         assertFalse(parseLink(link).isXray())
     }
 
