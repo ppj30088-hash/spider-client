@@ -1,5 +1,5 @@
 name: flrone
-description: Flrone's Flutter interface, built on the FlClash presentation layer and sing-box services.
+description: Spider Client's Flutter interface, built on the FlClash presentation layer and sing-box services.
 publish_to: none
 version: 1.0.0+1
 environment:

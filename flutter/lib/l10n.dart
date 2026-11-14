@@ -46,8 +46,8 @@ const _zh = <String, String>{
   "Matching domains are excluded from capture.": "不抓取匹配的域名。",
   "Keeps up to 300 requests and 32 MiB. Large bodies keep a prefix. HTTPS ports use the HTTP authority when socket metadata is unavailable.":
       "最多保留 300 条请求、32 MiB 数据。超长正文只保存开头。无法获取套接字信息时，HTTPS 端口按 HTTP 请求目标判断。",
-  "An empty selection captures applications in this Android user. Flrone itself is excluded from eBPF capture. Applications sharing a UID share the same filter.":
-      "未选择时抓取当前 Android 用户的应用。eBPF 不抓取 Flrone 自身；共享 UID 的应用使用相同筛选。",
+  "An empty selection captures applications in this Android user. Spider Client itself is excluded from eBPF capture. Applications sharing a UID share the same filter.":
+      "未选择时抓取当前 Android 用户的应用。eBPF 不抓取 Spider Client 自身；共享 UID 的应用使用相同筛选。",
   "Connections skipped or interrupted": "跳过或中断的连接",
   "TLS libraries attached": "个 TLS 库已挂载探针",
   "Capture source": "采集来源",

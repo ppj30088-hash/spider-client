@@ -125,7 +125,7 @@ class _BoxAppState extends State<BoxApp> with WidgetsBindingObserver {
         final scale = appTextScale(prefs, media.textScaler.scale(1)).clamp(.8, 1.4);
         final glass = (prefs['liquidGlass'] ?? 'none');
         return PrismApp(
-          title: 'Flrone',
+          title: 'Spider Client',
           debugShowCheckedModeBanner: false,
           theme: _theme(Brightness.light),
           darkTheme: _theme(Brightness.dark),

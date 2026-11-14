@@ -20,13 +20,13 @@ import java.io.IOException
 import java.io.InputStream
 
 /**
- * Flrone's GitHub releases (the desktop's CheckUpdate: `allow_beta_update` admits pre-releases). A release
+ * Spider Client's GitHub releases (the desktop's CheckUpdate: `allow_beta_update` admits pre-releases). A release
  * built by CI carries `throne-update.json` (buildScript/release_assets.py) and can be installed in-app; older releases
  * are offered in the browser only.
  */
 object UpdateChecker {
 
-    const val REPOSITORY = "yuedaochangmendian/throne-flclash-ui"
+    const val REPOSITORY = "ppj30088-hash/spider-client"
     const val RELEASES_PAGE = "https://github.com/$REPOSITORY/releases"
     private const val RELEASES_API = "https://api.github.com/repos/$REPOSITORY/releases?per_page=20"
 

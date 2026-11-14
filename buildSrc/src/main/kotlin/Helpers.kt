@@ -200,12 +200,12 @@ fun Project.setupApp() {
             }
         }
 
-        // Flrone-<versionName>[-<flavor>]-<abi>[-<buildType>][-unsigned].apk; oss release = Flrone-<versionName>-<abi>.apk
+        // SpiderClient-<versionName>[-<flavor>]-<abi>[-<buildType>][-unsigned].apk; oss release = SpiderClient-<versionName>-<abi>.apk
         applicationVariants.all {
             val variant = this
             outputs.all {
                 this as BaseVariantOutputImpl
-                outputFileName = "Flrone-${variant.versionName}" + outputFileName.removePrefix(project.name)
+                outputFileName = "SpiderClient-${variant.versionName}" + outputFileName.removePrefix(project.name)
                     .replace("-release", "")
                     .replace("-oss", "")
             }
