@@ -49,6 +49,7 @@ object Key {
 
     const val PROFILE_DIRTY = "profileDirty"
     const val PROFILE_ID = "profileId"
+    const val AETHER_PROFILE_ID = "aetherProfileId"
     const val PROFILE_GROUP = "profileGroup"
     const val PROFILE_CURRENT = "profileCurrent"
     const val RUNNING_PROFILES = "runningProfiles"
