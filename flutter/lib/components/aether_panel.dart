@@ -73,12 +73,13 @@ class _AetherPanelState extends State<AetherPanel> {
 
   Future<void> _disconnect() async {
     if (_busy) return;
+    final box = context.box;
     setState(() => _busy = true);
     try {
-      await context.box.serviceStop();
+      await box.serviceStop();
       await _refresh();
     } catch (error) {
-      context.box.report(error);
+      box.report(error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
