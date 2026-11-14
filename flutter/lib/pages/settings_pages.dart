@@ -174,20 +174,57 @@ class DnsPage extends StatelessWidget {
 const routingDomainStrategies = ['', 'ipv4_only', 'ipv6_only', 'prefer_ipv4', 'prefer_ipv6'];
 const ruleSetMirrors = [0, 1, 2, 3, 4, 5];
 
-class RoutingPage extends StatefulWidget {
+/// The Routing screen's primary view is the managed-mode service list: one
+/// switch per service, the surface the reference app leads with. Every entry
+/// that used to open the Routing page (Settings → Routing, a configuration's
+/// app-settings group) lands here.
+///
+/// The route-profile cards this page used to draw are not gone: they moved
+/// whole to [RouteProfilesPage], which this page's ⋮ menu opens ahead of the
+/// managed screen's own entries. The pool, the engine switches and the rule-set
+/// updates keep the same menu they had, so every PR #84 surface is still one
+/// tap from where it used to be.
+class RoutingPage extends StatelessWidget {
   const RoutingPage({super.key});
-  @override State<RoutingPage> createState() => _RoutingPageState();
+  @override
+  Widget build(BuildContext context) => ManagedModePage(menuItems: [
+    PopupMenuItem(
+      glyph: AppGlyphs.profiles,
+      label: context.tr('Route profiles'),
+      onPressed: () => openPage(context, const RouteProfilesPage()),
+    ),
+    PopupMenuItem(
+      glyph: AppGlyphs.rules,
+      label: context.tr('Global rules'),
+      onPressed: () => openPage(context, const GlobalRulesPage()),
+    ),
+    PopupMenuItem(
+      glyph: AppGlyphs.sliders,
+      label: context.tr('Route settings'),
+      onPressed: () => openPage(context, const _RouteSettingsPage()),
+    ),
+    PopupMenuItem(
+      glyph: AppGlyphs.sync,
+      label: context.tr('Automatic updates'),
+      onPressed: () => openPage(context, const _RouteUpdatePage()),
+    ),
+  ]);
 }
 
-/// The Routing page is the route-profile list, as Throne for Android's
-/// RouteFragment draws it: one card per profile, the current one marked.
+/// The route-profile list, as Throne for Android's RouteFragment draws it: one
+/// card per profile, the current one marked.
 ///
 /// The rules live one level down. A card opens that profile's rule list, which
 /// is where rules are added, edited, disabled and reordered; the shared pool
 /// that runs in front of every profile is a screen of its own behind ⋮ →
 /// "Global rules". Profile CRUD (select / create / clone / delete / remote
 /// update) has no kernel action behind it, so no control here pretends to do it.
-class _RoutingPageState extends State<RoutingPage> {
+class RouteProfilesPage extends StatefulWidget {
+  const RouteProfilesPage({super.key});
+  @override State<RouteProfilesPage> createState() => _RouteProfilesPageState();
+}
+
+class _RouteProfilesPageState extends State<RouteProfilesPage> {
   List<Json> _profiles = const [];
   int _currentId = 0;
   bool _loading = true;
@@ -243,7 +280,7 @@ class _RoutingPageState extends State<RoutingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      title: context.tr('Routing'),
+      title: context.tr('Route profiles'),
       iconActions: [
         IconButtonData(
           glyph: AppGlyphs.refresh,

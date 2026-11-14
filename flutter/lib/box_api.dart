@@ -93,15 +93,28 @@ extension ProfilesApi on BoxController {
   }
   Future<dynamic> profileNodeConfig(dynamic id) async {
     final k = kernel.attached;
-    if (k != null) return k.invoke<Object?>(ActionMethod.profileNodeConfig, data: {'id': id});
-    return call('profiles.nodeConfig', {'id': id});
+    if (k == null) return call('profiles.nodeConfig', {'id': id});
+    try {
+      return await k.invoke<Object?>(ActionMethod.profileNodeConfig, data: {'id': id});
+    } catch (_) {
+      // The kernel reads Room directly, so a missing database file, a WAL lock or a
+      // decode defect fails the read outright; the channel reads the same rows through
+      // ProfileManager. Reads only: a failed write must surface, not be re-applied.
+      return call('profiles.nodeConfig', {'id': id});
+    }
   }
   Future<dynamic> profileNodeUpdate(dynamic id, String name, String content) =>
       call('profiles.nodeUpdate', {'id': id, 'name': name, 'content': content});
   Future<dynamic> profileNodeTuningInfo(dynamic id) async {
     final k = kernel.attached;
-    if (k != null) return k.invoke<Object?>(ActionMethod.profileNodeTuningInfo, data: {'id': id});
-    return call('profiles.nodeTuningInfo', {'id': id});
+    if (k == null) return call('profiles.nodeTuningInfo', {'id': id});
+    try {
+      return await k.invoke<Object?>(ActionMethod.profileNodeTuningInfo, data: {'id': id});
+    } catch (_) {
+      // Same read-only fallback as profileNodeConfig: the channel answers from
+      // ProfileManager when the kernel cannot reach Room.
+      return call('profiles.nodeTuningInfo', {'id': id});
+    }
   }
   Future<dynamic> profileNodeTuningSave(dynamic id, Json value) =>
       call('profiles.nodeTuningSave', {'id': id, 'value': value});
@@ -205,8 +218,25 @@ extension RoutesApi on BoxController {
         'the route store needs the FFI driver; start the VPN first',
       ));
 
-  Future<dynamic> routeList() =>
-      _routeKernel().invoke<Object?>(ActionMethod.getRouteProfiles);
+  /// The three route READS degrade to the channel, exactly as the data plane
+  /// does: the kernel may be absent (no FFI driver) or its Room read may fail,
+  /// and a screen that shows the profile list or the pooled rules should not go
+  /// dark for that. The Kotlin `routes.list` arm reads the same documents
+  /// through `RouteManager`; the rule reads still have no channel arm, so a
+  /// failed kernel read there surfaces a friendly message instead of the raw
+  /// Go error. Writes below never degrade — masking a failed write would risk
+  /// double-applying or hiding data loss.
+  Future<dynamic> routeList() async {
+    try {
+      return await _routeKernel().invoke<Object?>(
+        ActionMethod.getRouteProfiles,
+      );
+    } catch (_) {
+      // No FFI driver, or its Room read failed; the channel arm answers the
+      // same documents through RouteManager.
+      return call('routes.list');
+    }
+  }
 
   Future<dynamic> routeRules(dynamic id) =>
       _routeKernel().invoke<Object?>(ActionMethod.getRouteRules, data: {'id': id});

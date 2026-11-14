@@ -86,6 +86,7 @@ export 'l10n.dart';
 export 'components/option_sheet.dart';
 export 'components/settings_controls.dart';
 export 'pages/settings_pages.dart';
+export 'pages/managed_mode_page.dart';
 export 'pages/route_texts.dart';
 export 'pages/route_rules_page.dart';
 export 'pages/global_rules.dart';

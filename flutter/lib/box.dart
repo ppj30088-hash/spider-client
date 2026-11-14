@@ -328,11 +328,37 @@ class BoxController extends ChangeNotifier {
     }, {'visible': _dataOwners[data]?.isNotEmpty == true}));
   }
 
-  Future<Json> profileStats(int id) => _profileStats.putIfAbsent(id, () async {
+  /// One profile-stats read: the kernel's Room query when the driver is attached, else the
+  /// channel. A failed kernel read falls back to the channel, which answers the same rows
+  /// through ProfileManager — a room_db.go failure (missing file, WAL lock, decode) must not
+  /// blank the card while a working reader exists.
+  Future<Json> _readProfileStats(int id) async {
     final k = kernel.attached;
-    if (k != null) return json(await k.invoke<Object?>(ActionMethod.profileStats, data: {'id': id}));
+    if (k != null) {
+      try {
+        return json(await k.invoke<Object?>(ActionMethod.profileStats, data: {'id': id}));
+      } catch (_) {
+        // Read-only fallback; the channel arm below is the same read.
+      }
+    }
     return json(await call('profiles.stats', {'id': id}));
-  });
+  }
+
+  Future<Json> profileStats(int id) {
+    final cached = _profileStats[id];
+    if (cached != null) return cached;
+    // Single flight, and a failure is evicted rather than cached: only a 'profiles' event
+    // clears this map, so a stored failed future would answer every later read of the card
+    // with the same error and it would show '—' until the next profile refresh.
+    final completer = Completer<Json>();
+    final future = completer.future;
+    _profileStats[id] = future;
+    unawaited(_readProfileStats(id).then(completer.complete, onError: (Object error, StackTrace stack) {
+      if (identical(_profileStats[id], future)) _profileStats.remove(id);
+      completer.completeError(error, stack);
+    }));
+    return future;
+  }
 
   Future<Uint8List?> appIcon(String package) => appIcons.putIfAbsent(package, () async {
     try { return await call('apps.icon', {'package': package}) as Uint8List?; }
