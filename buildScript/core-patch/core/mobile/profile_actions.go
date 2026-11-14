@@ -46,6 +46,20 @@ func readRoomProfiles() ([]row, error) {
 		"`traffic_up`, `test_error` FROM `profiles`;")
 }
 
+// currentRouteIDFromRoom reads `settings.current_route_id`, the row the native
+// settings store writes and the Dart DAO reads. A missing or unparsable value
+// answers 0, which the caller treats as "no profile yet" rather than guessing.
+func currentRouteIDFromRoom() (int64, error) {
+	rows, err := queryRows("SELECT `value` FROM `settings` WHERE `key` = 'current_route_id' LIMIT 1;")
+	if err != nil {
+		return 0, err
+	}
+	if len(rows) == 0 {
+		return 0, nil
+	}
+	return rowInt64(rows[0], "value"), nil
+}
+
 // --- stats -------------------------------------------------------------------
 
 // handleProfileStats returns the counts the dashboard card shows: group membership size
@@ -70,16 +84,13 @@ func handleProfileStats(data json.RawMessage) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	routeProfiles, err := readDocument(routeProfilesDoc)
+	// The current profile is `settings.current_route_id` — the same row Room's
+	// `DataStore.currentRouteId` writes and the Dart DAO reads. The route
+	// document's `__current` marker is dead: its only writer was the route
+	// profile CRUD removed in #70, so reading it here always answered 0.
+	currentID, err := currentRouteIDFromRoom()
 	if err != nil {
 		return nil, err
-	}
-	var currentID int64
-	for _, rp := range routeProfiles {
-		if rowBool(rp, "__current") {
-			currentID = rowInt64(rp, "id")
-			break
-		}
 	}
 	ruleCount := 0
 	if currentID > 0 {

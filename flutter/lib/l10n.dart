@@ -1190,6 +1190,17 @@ const _zh = <String, String>{
   'Drag to reorder; the first match wins. A profile can keep single rules off from its own screen.':
       '拖动可排序，先匹配先生效；单个配置可在自己的页面里关闭其中某条规则。',
   'Every routing setting returns to its Throne default.': '此页所有路由设置恢复为 Throne 默认值。',
+  'Managed mode': '内置托管模式',
+  'Add service': '添加服务',
+  'Move to the front': '移到最前',
+  'The rules were not written': '规则未写入',
+  'The switch could not be saved': '开关状态保存失败',
+  'The switches are saved; Retry writes them once the service is running.':
+      '开关状态已保存；服务运行后点重试即可写入。',
+  'Every service is already enabled': '所有服务都已启用',
+  'Managed rules in the global pool': '全局规则池中的托管规则',
+  'The order could not be saved': '顺序保存失败',
+  'No rule set for': '以下服务没有可用的规则集',
 };
 
 extension BoxLocalization on BuildContext {

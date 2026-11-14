@@ -11,12 +11,15 @@ import (
 	"testing"
 )
 
-func group(id int64, order int64) roomGroup {
+// groupRow rather than `group`: autoselector.go and command.go import
+// sing-box's protocol/group, and a package-level func of that name shadows the
+// import for the whole test build.
+func groupRow(id int64, order int64) roomGroup {
 	return roomGroup{id: id, order: order}
 }
 
 func TestOrderedGroupIDsIsZeroBased(t *testing.T) {
-	groups := []roomGroup{group(1, 0), group(2, 1)}
+	groups := []roomGroup{groupRow(1, 0), groupRow(2, 1)}
 	got := orderedGroupIDs(groups, []int64{2, 1})
 	if !reflect.DeepEqual(got, []int64{2, 1}) {
 		t.Fatalf("want [2 1], got %v", got)
@@ -24,7 +27,7 @@ func TestOrderedGroupIDsIsZeroBased(t *testing.T) {
 }
 
 func TestOrderedGroupIDsAppendsOmittedGroups(t *testing.T) {
-	groups := []roomGroup{group(1, 0), group(2, 1), group(3, 2)}
+	groups := []roomGroup{groupRow(1, 0), groupRow(2, 1), groupRow(3, 2)}
 	got := orderedGroupIDs(groups, []int64{3})
 	if !reflect.DeepEqual(got, []int64{3, 1, 2}) {
 		t.Fatalf("want [3 1 2], got %v", got)
@@ -32,7 +35,7 @@ func TestOrderedGroupIDsAppendsOmittedGroups(t *testing.T) {
 }
 
 func TestOrderedGroupIDsDropsUnknownAndDuplicateIDs(t *testing.T) {
-	groups := []roomGroup{group(1, 0), group(2, 1)}
+	groups := []roomGroup{groupRow(1, 0), groupRow(2, 1)}
 	got := orderedGroupIDs(groups, []int64{99, 2, 2, 1})
 	if !reflect.DeepEqual(got, []int64{2, 1}) {
 		t.Fatalf("duplicates and unknown ids must not shift the order: %v", got)
@@ -40,7 +43,7 @@ func TestOrderedGroupIDsDropsUnknownAndDuplicateIDs(t *testing.T) {
 }
 
 func TestOrderedGroupIDsLeavesNoHoles(t *testing.T) {
-	groups := []roomGroup{group(1, 5), group(2, 9), group(3, 42)}
+	groups := []roomGroup{groupRow(1, 5), groupRow(2, 9), groupRow(3, 42)}
 	got := orderedGroupIDs(groups, []int64{1, 2, 3})
 	if !reflect.DeepEqual(got, []int64{1, 2, 3}) {
 		t.Fatalf("want [1 2 3], got %v", got)
@@ -48,7 +51,7 @@ func TestOrderedGroupIDsLeavesNoHoles(t *testing.T) {
 }
 
 func TestOrderedGroupIDsWithEmptyInputKeepsStoredOrder(t *testing.T) {
-	groups := []roomGroup{group(7, 0), group(4, 1)}
+	groups := []roomGroup{groupRow(7, 0), groupRow(4, 1)}
 	got := orderedGroupIDs(groups, nil)
 	if !reflect.DeepEqual(got, []int64{7, 4}) {
 		t.Fatalf("an empty request must keep the stored order: %v", got)

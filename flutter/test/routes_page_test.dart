@@ -1,6 +1,10 @@
-// The routing page after the profile-card rework: a card per route profile, the
-// shared rule pool one level down behind the overflow menu, and a profile's own
-// rules on a page of their own.
+// The route-profile page: a card per route profile, the shared rule pool one
+// level down behind the overflow menu, and a profile's own rules on a page of
+// their own.
+//
+// The Routing screen itself is the managed-mode service list now, so the cards
+// moved one step in to RouteProfilesPage; every assertion below is kept as it
+// was, retargeted at that page.
 //
 // The pool assertions that used to be this page's are kept verbatim on the pool
 // page: nothing the Routing page could do before was dropped, it moved.
@@ -154,8 +158,10 @@ void main() {
     });
   }
 
+  /// The cards live on their own page now: the Routing screen opens the
+  /// managed service list, and its ⋮ menu is the way to the profile cards.
   Future<void> openRouting(WidgetTester tester) async {
-    openPage(tester.element(find.byType(HomePage)), const RoutingPage());
+    openPage(tester.element(find.byType(HomePage)), const RouteProfilesPage());
     await tester.pumpAndSettle();
   }
 
@@ -167,7 +173,91 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  group('the routing page is the route-profile list', () {
+  /// The Routing screen's own overflow, once it is on screen.
+  Future<void> openRoutingMenu(WidgetTester tester) async {
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle();
+  }
+
+  group('the routing screen is the managed service list', () {
+    testWidgets('its primary view is the service switches', (tester) async {
+      reportFlutterErrors();
+      await mount(tester);
+      openPage(tester.element(find.byType(HomePage)), const RoutingPage());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ManagedModePage), findsOneWidget);
+      // The screenshot's shape: a switch per service, not the profile cards.
+      expect(find.byType(RouteProfilesPage), findsNothing);
+      expect(find.text('Google'), findsWidgets);
+      expect(find.text('Telegram'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the overflow still reaches profiles, pool and engine settings', (tester) async {
+      reportFlutterErrors();
+      await mount(tester);
+      openPage(tester.element(find.byType(HomePage)), const RoutingPage());
+      await tester.pumpAndSettle();
+      await openRoutingMenu(tester);
+
+      expect(find.text('Route profiles'), findsOneWidget);
+      expect(find.text('Global rules'), findsOneWidget);
+      expect(find.text('Route settings'), findsOneWidget);
+      expect(find.text('Automatic updates'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the profiles entry opens the card list', (tester) async {
+      reportFlutterErrors();
+      await mount(tester);
+      openPage(tester.element(find.byType(HomePage)), const RoutingPage());
+      await tester.pumpAndSettle();
+      await openRoutingMenu(tester);
+      await tester.tap(find.text('Route profiles'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RouteProfilesPage), findsOneWidget);
+      expect(find.text('Default profile'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the pool entry opens the global rules page', (tester) async {
+      reportFlutterErrors();
+      await mount(tester);
+      openPage(tester.element(find.byType(HomePage)), const RoutingPage());
+      await tester.pumpAndSettle();
+      await openRoutingMenu(tester);
+      await tester.tap(find.text('Global rules'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GlobalRulesPage), findsOneWidget);
+      expect(find.text('Pool A'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the engine entries open their settings pages', (tester) async {
+      reportFlutterErrors();
+      await mount(tester);
+      openPage(tester.element(find.byType(HomePage)), const RoutingPage());
+      await tester.pumpAndSettle();
+
+      await openRoutingMenu(tester);
+      await tester.tap(find.text('Route settings'));
+      await tester.pumpAndSettle();
+      expect(find.text('Outbound domain strategy'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      await openRoutingMenu(tester);
+      await tester.tap(find.text('Automatic updates'));
+      await tester.pumpAndSettle();
+      expect(find.text('Update rule sets'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('the route-profile page is the card list', () {
     testWidgets('a card per profile, with the current one badged', (tester) async {
       reportFlutterErrors();
       await mount(tester, routeProfiles: [

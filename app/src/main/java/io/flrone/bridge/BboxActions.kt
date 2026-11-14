@@ -1,6 +1,8 @@
 package io.flrone.bridge
 
 import io.nekohasekai.sagernet.database.RouteManager
+import io.nekohasekai.sagernet.route.OutboundIds
+import io.nekohasekai.sagernet.route.RuleType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -55,6 +57,45 @@ object BboxActions {
                     mapOf("name" to name, "url" to url)
                 },
             )
+        }
+        // The route-profile list, for the Dart data plane's fallback path. The
+        // kernel owns the route documents and answers `getRouteProfiles` over
+        // the action bus; when the FFI driver is absent (or its Room read
+        // fails) that path throws, and `RouteProfilesSource` needs this arm to
+        // keep the screen alive. `RouteManager.all()` reads the same documents
+        // through RouteJsonStore and seeds the default profile, so both
+        // producers answer the identical wire shape.
+        register("routes.list") {
+            withContext(Dispatchers.IO) {
+                val profiles = RouteManager.all()
+                // `current()` applies the same fallback the native screen uses
+                // (a missing or raw profile moves to the first usable one), so
+                // the badge agrees with what the kernel will build.
+                val currentId = runCatching { RouteManager.current().id }.getOrDefault(-1L)
+                mapOf(
+                    "currentId" to currentId,
+                    "profiles" to profiles.map { profile ->
+                        val rules = profile.rules
+                        mapOf(
+                            "id" to profile.id,
+                            "name" to profile.name,
+                            "defaultOutbound" to OutboundIds.toName(profile.default_outbound_id),
+                            "current" to (profile.id == currentId),
+                            "isRemote" to profile.is_remote,
+                            "isRaw" to profile.is_raw,
+                            "ruleCount" to rules.size,
+                            // The three simple address types plus WARP, matching
+                            // `isSimpleAddressType` on the kernel side.
+                            "simpleRuleCount" to rules.count {
+                                it.type == RuleType.SIMPLE_ADDRESS_PROXY.id ||
+                                    it.type == RuleType.SIMPLE_ADDRESS_BYPASS.id ||
+                                    it.type == RuleType.SIMPLE_ADDRESS_BLOCK.id ||
+                                    it.type == RuleType.SIMPLE_ADDRESS_WARP_BYPASS.id
+                            },
+                        )
+                    },
+                )
+            }
         }
     }
 }

@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"sync"
 )
 
@@ -135,6 +136,11 @@ func writeDocument(name string, rows []row) error {
 // json.Unmarshal gives every number a float64, so a row round-tripped through this file would
 // turn an int64 id into something that prints as 7 but compares differently. These read the
 // typed value the entity conversions expect.
+//
+// A row read out of Room arrives as text instead: sqlite3_get_table hands every cell back as a
+// string (room_db.go queryRows), so the numeric helpers need a string arm or an id compared
+// against a text cell never matches. That is what made profileNodeConfig answer "no proxy
+// with id 70" for a row that was right there.
 
 func rowString(r row, key string) string {
 	if value, ok := r[key].(string); ok {
@@ -144,13 +150,16 @@ func rowString(r row, key string) string {
 }
 
 func rowInt(r row, key string) int {
-	switch value := r[key].(type) {
-	case float64:
-		return int(value)
-	case int:
-		return value
+	value := rowInt64(r, key)
+	// The int the callers want is a rule type or an order; clamp instead of
+	// letting a wide column truncate on a 32-bit build.
+	if value > math.MaxInt32 {
+		return math.MaxInt32
 	}
-	return 0
+	if value < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int(value)
 }
 
 func rowInt64(r row, key string) int64 {
@@ -161,6 +170,11 @@ func rowInt64(r row, key string) int64 {
 		return value
 	case int:
 		return int64(value)
+	// SQLite's get_table answers text cells whatever the declared column type.
+	case string:
+		if parsed, err := strconv.ParseInt(value, 10, 64); err == nil {
+			return parsed
+		}
 	}
 	return 0
 }
