@@ -1306,9 +1306,8 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
                       child: Text(dialogContext.tr('Save')),
                     ),
                   ],
-                  // Prism's own checkbox row: Material's CheckboxListTile
-                  // wants a Material ancestor the dialog frame does not
-                  // provide, and threw on every open.
+                  // Prism's own checkbox row, consistent with the app's
+                  // ListItem primitives.
                   child: ListView(
                     shrinkWrap: true,
                     children: [

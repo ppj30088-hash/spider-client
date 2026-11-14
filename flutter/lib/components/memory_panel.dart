@@ -31,11 +31,11 @@ class MemorySummary extends StatelessWidget {
     final total = bytes(remote ? (snapshot['total'] as num? ?? 0) : rss).split(' ');
     // The first series is primary; the second is primary at 45% over the card
     // (surfaces.md), not an unrelated tertiary hue. The residual "Other" slice
-    // is a neutral inset well, not a text-role tint.
+    // is a neutral tint (onSurfaceVariant at 35%) distinct from the empty track.
     final parts = <(String, num, Color)>[
       if (!remote) ('App', app, color.primary),
       ('Core', core, secondSeriesColor(context)),
-      if (!remote && other > 0) ('Other', other, SurfaceLevel.inset.colorOf(color)),
+      if (!remote && other > 0) ('Other', other, color.onSurfaceVariant.withValues(alpha: .35)),
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text.rich(TextSpan(children: [

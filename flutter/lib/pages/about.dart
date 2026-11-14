@@ -50,11 +50,11 @@ class _AboutPageState extends State<AboutPage> {
     final box = context.box, colors = context.colorScheme;
     return BoxPage(title: 'About', loading: _checking, children: [
       Column(children: [
-        // The launcher's own artwork: the watercolour range the app icon is cut from, so the picture
-        // here is the picture on the home screen. App artwork keeps its rounded shape; the generic
-        // shadow/border stack is gone, since structure now comes from surface levels.
+        // The launcher's own artwork: the watercolour range the app icon is cut from.
+        // A 0.5dp hairline separates the near-white icon edge from the near-white
+        // page surface in light mode; the shadow stack is gone (surface levels do it).
         DecoratedBox(decoration: ShapeDecoration(
-          shape: AppShape.all(AppCorner.lg),
+          shape: AppShape.all(AppCorner.lg).copyWith(side: const BorderSide(color: Color(0x14000000), width: 0.5)),
           image: const DecorationImage(image: AssetImage('assets/images/app_icon.webp'), fit: BoxFit.cover),
         ), child: const SizedBox.square(dimension: 96)),
         const SizedBox(height: 20),

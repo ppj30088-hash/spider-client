@@ -175,8 +175,7 @@ class _NotificationActionsEditorState extends State<_NotificationActionsEditor> 
         child: Text(context.tr('Save')),
       ),
     ],
-    // Prism's own checkbox row; a Material CheckboxListTile would need a
-    // Material ancestor beyond the alert's transparent pane.
+    // Prism's own checkbox row, consistent with the app's ListItem primitives.
     child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(
         padding: const EdgeInsets.only(bottom: 12),

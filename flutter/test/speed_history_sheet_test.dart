@@ -81,6 +81,13 @@ void main() {
     // _HistoryItem renders each record's throughput line.
     expect(find.textContaining('↓'), findsWidgets);
     expect(tester.takeException(), isNull);
+    // 12 records exceed the viewport; drag to verify the list scrolls.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    // Scroll back to the header so the Close button is reachable.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, 400));
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();
     expect(find.text('Speed test history'), findsNothing);

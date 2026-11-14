@@ -315,9 +315,8 @@ class _HistorySheetState extends State<_HistorySheet> {
 
   @override
   Widget build(BuildContext context) {
-    // A sheet's own header and a shrink-wrapping list, like every other sheet
-    // in the app: scrolling comes from Prism's sheet, not a Material
-    // isScrollControlled flag. The foot clears bottomInset.
+    // A sheet's own header and a shrink-wrapping list: scrolling comes from
+    // Prism's sheet route, not a Material isScrollControlled flag.
     return ListView(
       shrinkWrap: true,
       padding: EdgeInsets.fromLTRB(

@@ -122,7 +122,7 @@ class _JsonEditorState extends State<_JsonEditor> {
         child: Text(context.tr(widget.hint!), style: AppTextStyle.caption1.of(context)),
       ),
       TextField(
-        controller: _controller, minLines: 6, maxLines: null, autocorrect: false,
+        controller: _controller, minLines: 6, maxLines: 16, autocorrect: false,
         keyboardType: TextInputType.multiline,
         style: const TextStyle(fontFamily: 'JetBrainsMono'),
         decoration: const InputDecoration(),
@@ -299,7 +299,7 @@ class _LinesEditorState extends State<_LinesEditor> {
         child: Text(widget.hint!, style: AppTextStyle.caption1.of(context)),
       ),
       TextField(
-        controller: _controller, minLines: 3, maxLines: null, autocorrect: false,
+        controller: _controller, minLines: 3, maxLines: 10, autocorrect: false,
         keyboardType: TextInputType.multiline,
         decoration: const InputDecoration(),
       ),

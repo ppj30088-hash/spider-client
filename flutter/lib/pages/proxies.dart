@@ -284,11 +284,9 @@ class _ProxiesPageState extends State<ProxiesPage>
   /// FlClash's DelayTestButton: the current group's latency run, over the list.
   ///
   /// A Prism press region on a primary circular fill is the app's equivalent of
-  /// the small FAB it replaces: same position, tooltip, 40 dp hit area and a
-  /// disabled state while a test is in flight, with Prism's [ActivityIndicator]
-  /// as the spinner. It is built from the low-level [PressRegion] (rather than
-  /// the shared icon-button widget) because this floating button is recreated on
-  /// every state change, and a stateful button there re-enters the frame's build.
+  /// the small FAB it replaces: same position, tooltip, 48 dp hit area (matching
+  /// Material's kMinInteractiveDimension) and a disabled state while a test is
+  /// in flight, with Prism's [ActivityIndicator] as the spinner.
   Widget _delayTestFab() {
     final tag = _currentGroup;
     if (tag == null) return const SizedBox.shrink();
@@ -312,7 +310,7 @@ class _ProxiesPageState extends State<ProxiesPage>
                 : scheme.primary,
             overlay: PressRegion.pressOverlay,
             child: SizedBox.square(
-              dimension: 40,
+              dimension: 48,
               child: Center(
                 child: testing
                     ? ActivityIndicator(size: 18, semanticLabel: label)

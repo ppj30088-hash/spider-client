@@ -472,7 +472,7 @@ class _AutoSelectorPageState extends State<AutoSelectorPage>
         ('pin', context.tr('Pin')),
         ('auto', context.tr('Use automatic')),
       ],
-      selected: pinned ? 'pin' : 'auto',
+      selected: pinned ? 'pin' : null,
     );
     if (!mounted) return;
     if (picked == 'pin') await _pin((member['id'] as num?)?.toInt() ?? -1);

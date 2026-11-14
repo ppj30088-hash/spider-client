@@ -468,10 +468,10 @@ class SpeedCurves extends StatelessWidget {
     final scheme = context.colorScheme;
     final peak = [0.0, ...download, ...upload].reduce(math.max);
     final scale = peak <= 0 ? 1.0 : peak;
-    // The first series is primary; the second is primary at 45% over the card,
-    // not an unrelated tertiary hue (surfaces.md). The chart itself is custom
-    // paint, but its palette follows the shared surface contract. The panel
-    // hosting it set the current surface scope, so blend over that surface.
+    // The first series is primary; the second is primary at 45% over the card
+    // surface (surfaces.md), not an unrelated tertiary hue. The blend is
+    // hardcoded to SurfaceLevel.card so the value is identical regardless of
+    // the local surface scope.
     final second = secondSeriesColor(context);
     return SizedBox(
       height: height,

@@ -321,6 +321,10 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
             ('', context.tr('Keep default')), ('0', 'Auto'), ('1', 'HTTP/1.1'),
           ], _options['httpVersion']?.toString() ?? '', (value) => _setOption('httpVersion', value.isEmpty ? null : int.tryParse(value)))),
           _menuRow(context.tr('Update interval'), _intervalLabel(), () async {
+            // The controller must survive the dialog's exit animation; the
+            // route future resolves at pop time but the TextField is still
+            // mounted during the 404ms reverse (see settings_controls.dart
+            // _LinesEditor for the same pattern).
             final controller = TextEditingController(text: _updateInterval.text);
             final picked = await showAppDialog<String>(context, child: Builder(builder: (dialogContext) => AlertDialog(
               hasFields: true,
@@ -334,7 +338,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
                 TextButton(onPressed: () => Navigator.pop(dialogContext, controller.text), child: Text(dialogContext.tr('OK'))),
               ],
             )));
-            controller.dispose();
+            // Do NOT dispose here: the exit animation still reads the controller.
             if (picked != null) setState(() { _updateInterval.text = picked.trim(); if (_attempted) setState(() {}); });
           }),
           _menuRow(context.tr('Server interval'), _serverIntervalLabel(), () => _pick(

@@ -717,7 +717,7 @@ class _ResultTiles extends StatelessWidget {
       (
         context.tr('Upload'),
         value('upload') > 0 ? speedRateText(value('upload')) : '—',
-        secondSeriesColor(context),
+        scheme.onSurface,
       ),
       (
         context.tr('Loaded latency'),

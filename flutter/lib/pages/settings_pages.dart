@@ -250,7 +250,9 @@ class _RoutingPageState extends State<RoutingPage> {
           ),
         ],
         body: ListView(
-          padding: boxPagePadding(context),
+          // The first child is a title-less generateSection which already
+          // inserts ListSectionGap; use sectionsTopPadding to avoid doubling.
+          padding: EdgeInsets.fromLTRB(16, context.sectionsTopPadding, 16, 24 + context.bottomInset),
           children: [
             // The title card sits above the list, as FlClash's RuleTitle does,
             // and carries this page's primary actions: the bar's icons moved

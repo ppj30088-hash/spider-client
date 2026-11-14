@@ -138,7 +138,8 @@ class _TestPanelPageState extends State<TestPanelPage> {
     final downloadColor = context.colorScheme.primary;
     // The batch panel draws the speed screen's own curve: download is primary,
     // upload is primary at 45% over the card (surfaces.md), not tertiary.
-    final uploadColor = secondSeriesColor(context);
+    // Use onSurfaceVariant for legend text; secondSeriesColor is for chart fills.
+    final uploadColor = context.colorScheme.onSurfaceVariant;
     Widget legend(String label, double value, Color color) => Text(
       '● ${context.tr(label)}: ${speedRateText(value)}',
       style: context.listCaptionStyle.copyWith(color: color),
@@ -241,7 +242,6 @@ class _TestPanelPageState extends State<TestPanelPage> {
                 final picked = await showOptionSheet<int>(
                   context: context,
                   title: context.tr('Scope'),
-                  selected: _scopeId,
                   options: [
                     for (final profile in scopes)
                       ((profile['id'] as num).toInt(), profile['name'].toString()),

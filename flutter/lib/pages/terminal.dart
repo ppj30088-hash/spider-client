@@ -166,8 +166,7 @@ class _GhosttySurfaceState extends State<GhosttySurface> {
     if (!widget.preview) SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
       for (final key in const ['Esc', 'Tab', 'Ctrl', 'Alt', '↑', '↓', '←', '→', 'Home', 'End', 'PgUp', 'PgDn', 'Paste', 'Keyboard'])
         TextButton(onPressed: _channel == null ? null : () => _key(key),
-          // A chosen modifier key is a chosen segment: a solid primary fill with
-          // onPrimary, not a tonal-container tint.
+          // An armed/locked modifier gets a solid primary fill to show its state.
           style: _modifiers[key.toLowerCase()] == 'ARMED' || _modifiers[key.toLowerCase()] == 'LOCKED'
             ? ButtonStyle.from(backgroundColor: context.colorScheme.primary, foregroundColor: context.colorScheme.onPrimary) : null,
           child: Text(context.tr(key) + (_modifiers[key.toLowerCase()] == 'LOCKED' ? ' •' : ''))),
