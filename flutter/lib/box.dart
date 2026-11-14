@@ -127,6 +127,10 @@ class BoxController extends ChangeNotifier {
   final _revisions = List<int>.filled(BoxAspect.values.length, 0);
   final _stateChanges = ChangeNotifier();
   final _dataOwners = <BoxData, Set<Object>>{};
+  // More than one ProxiesPage can be alive at once (the dock tab and a nested
+  // sheet opened from the dashboard). A plain bool lets the nested page's
+  // dispose switch off the rows the still-mounted tab is reading.
+  final _groupOwners = <Object>{};
   Listenable get stateChanges => _stateChanges;
   Json dashboard = {}, settings = {}, preferences = {}, rates = {};
 
@@ -300,6 +304,17 @@ class BoxController extends ChangeNotifier {
     if (ready && wasVisible != owners.isNotEmpty) _syncData(data);
   }
 
+  /// Ref-counted counterpart for the group rows, so closing one of several
+  /// live Proxies pages cannot turn off the visibility the others rely on.
+  void setGroupsVisible(Object owner, bool visible) {
+    if (_disposed) return;
+    final wasVisible = _groupOwners.isNotEmpty;
+    if (visible) { _groupOwners.add(owner); } else { _groupOwners.remove(owner); }
+    if (ready && wasVisible != _groupOwners.isNotEmpty) {
+      unawaited(act('groups.visible', {'visible': _groupOwners.isNotEmpty}));
+    }
+  }
+
   void _syncData(BoxData data) {
     // Must stay synchronous: BoxDataSubscription's demand contract expects one
     // bridge call per visibility change, and its tests assert the exact order.
@@ -425,6 +440,10 @@ class BoxController extends ChangeNotifier {
       systemAccentColor = (result['systemAccentColor'] as num?)?.toInt() ?? 0xff007aff;
       dashboard = json(result['dashboard']);
       profiles = rows(result['profiles']);
+      // `ready` already carries the catalog's group rows and the host baselines
+      // them so the pump stays silent; seed them here or the Proxies screen
+      // renders its empty state until a visibility toggle or catalog bump.
+      if (result['groups'] is List) groups = rows(result['groups']);
       settings = json(result['settings']);
       capabilities = BoxCapabilities.parse(result['capabilities']);
       preferences = json(result['preferences']);
@@ -451,6 +470,12 @@ class BoxController extends ChangeNotifier {
         report(error);
       }
       for (final data in _dataOwners.keys) { _syncData(data); }
+      // A Proxies page can mount before `ready` completes; its first
+      // setGroupsVisible saw ready=false and sent nothing. Re-assert the
+      // negotiated state now that the bridge is attached.
+      if (_groupOwners.isNotEmpty) {
+        unawaited(act('groups.visible', {'visible': true}));
+      }
     } catch (error) {
       startupError = describe(error);
       // `ready` never completed, so config.build cannot be trusted and the

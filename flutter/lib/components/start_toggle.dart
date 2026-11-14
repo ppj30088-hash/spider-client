@@ -115,6 +115,14 @@ class _StartToggleState extends State<StartToggle>
           child: ElasticPress(
             enabled: enabled,
             child: TweenAnimationBuilder<double>(
+              // The overlay tween only rebuilds when its end value changes, but
+              // the fill also depends on `enabled` and the current scheme. A
+              // false -> true transition (or an accent change) can leave the
+              // end at 0, so without this key the subtree keeps the painter
+              // built with the old grey/inset colour indefinitely. Recreating
+              // the tween on those changes makes the button pick up its theme
+              // colour deterministically on the first frame it becomes usable.
+              key: ValueKey('start-overlay:$enabled:${fill.toARGB32()}'),
               tween: Tween(end: _overlay),
               duration: stateDuration,
               builder: (_, overlay, child) => AnimatedBuilder(
