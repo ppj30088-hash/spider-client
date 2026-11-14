@@ -150,7 +150,16 @@ func rowString(r row, key string) string {
 }
 
 func rowInt(r row, key string) int {
-	return int(rowInt64(r, key))
+	value := rowInt64(r, key)
+	// The int the callers want is a rule type or an order; clamp instead of
+	// letting a wide column truncate on a 32-bit build.
+	if value > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if value < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int(value)
 }
 
 func rowInt64(r row, key string) int64 {
