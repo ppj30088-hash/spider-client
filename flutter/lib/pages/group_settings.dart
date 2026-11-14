@@ -200,17 +200,15 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
     }
   }
 
-  /// The pick lists of a menu row: value + label pairs, the current one checked by the dialog's radio.
+  /// The pick lists of a menu row: value + label pairs, the current one
+  /// carrying the primary check in the option sheet.
   Future<void> _pick(String title, List<(String, String)> choices, String current, ValueChanged<String> onPicked) async {
-    final picked = await showDialog<String>(context: context, builder: (context) => SimpleDialog(
-      title: Text(title),
-      children: [
-        for (final (value, label) in choices) SimpleDialogOption(
-          onPressed: () => Navigator.pop(context, value),
-          child: Text(label, style: value == current ? TextStyle(fontWeight: FontWeight.bold) : null),
-        ),
-      ],
-    ));
+    final picked = await showOptionSheet<String>(
+      context: context,
+      title: title,
+      options: choices,
+      selected: current,
+    );
     if (picked != null) onPicked(picked);
   }
 
@@ -323,18 +321,24 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
             ('', context.tr('Keep default')), ('0', 'Auto'), ('1', 'HTTP/1.1'),
           ], _options['httpVersion']?.toString() ?? '', (value) => _setOption('httpVersion', value.isEmpty ? null : int.tryParse(value)))),
           _menuRow(context.tr('Update interval'), _intervalLabel(), () async {
+            // The controller must survive the dialog's exit animation; the
+            // route future resolves at pop time but the TextField is still
+            // mounted during the 404ms reverse (see settings_controls.dart
+            // _LinesEditor for the same pattern).
             final controller = TextEditingController(text: _updateInterval.text);
-            final picked = await showDialog<String>(context: context, builder: (context) => AlertDialog(
-              title: context.tr('Update interval'),
+            final picked = await showAppDialog<String>(context, child: Builder(builder: (dialogContext) => AlertDialog(
+              hasFields: true,
+              title: dialogContext.tr('Update interval'),
               child: TextField(controller: controller, autofocus: true, keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(hintText: context.tr('Keep default')),
-                onSubmitted: (value) => Navigator.pop(context, value)),
+                decoration: InputDecoration(hintText: dialogContext.tr('Keep default')),
+                onSubmitted: (value) => Navigator.pop(dialogContext, value)),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Cancel'))),
-                TextButton(onPressed: () => Navigator.pop(context, controller.text), child: Text(context.tr('OK'))),
+                TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(dialogContext.tr('Cancel'))),
+                TextButton(onPressed: () => Navigator.pop(dialogContext, controller.text), child: Text(dialogContext.tr('OK'))),
               ],
-            ));
+            )));
+            // Do NOT dispose here: the exit animation still reads the controller.
             if (picked != null) setState(() { _updateInterval.text = picked.trim(); if (_attempted) setState(() {}); });
           }),
           _menuRow(context.tr('Server interval'), _serverIntervalLabel(), () => _pick(

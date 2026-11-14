@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import '../widgets.dart';
 import 'data_subscription.dart';
 import 'form.dart';
+import 'speed_gauge.dart';
 
 /// FlClash's memory summary with same-process accounting from libbox.
 class MemoryPanel extends StatelessWidget {
@@ -28,9 +29,12 @@ class MemorySummary extends StatelessWidget {
     // dalvik/native/other split, which add up to it. Nothing here is derived, so nothing here can
     // disagree with the process total.
     final total = bytes(remote ? (snapshot['total'] as num? ?? 0) : rss).split(' ');
+    // The first series is primary; the second is primary at 45% over the card
+    // (surfaces.md), not an unrelated tertiary hue. The residual "Other" slice
+    // is a neutral tint (onSurfaceVariant at 35%) distinct from the empty track.
     final parts = <(String, num, Color)>[
       if (!remote) ('App', app, color.primary),
-      ('Core', core, Color.alphaBlend(color.tertiary.withValues(alpha: .62), SurfaceLevel.card.colorOf(color))),
+      ('Core', core, secondSeriesColor(context)),
       if (!remote && other > 0) ('Other', other, color.onSurfaceVariant.withValues(alpha: .35)),
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
