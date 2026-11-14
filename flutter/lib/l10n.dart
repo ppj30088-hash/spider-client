@@ -1184,6 +1184,7 @@ const _zh = <String, String>{
   'Inbound ports, the node templates new nodes are built from, and the subscription profiles.':
       '入站端口、新建节点所用模板，以及订阅配置。',
   'Route settings': '路由设置',
+  'Edit rules': '编辑规则',
   'Applied in front of every profile': '对所有配置生效',
   'Drag to reorder; the first match wins.': '拖动可排序，先匹配先生效。',
   'Drag to reorder; the first match wins. A profile can keep single rules off from its own screen.':

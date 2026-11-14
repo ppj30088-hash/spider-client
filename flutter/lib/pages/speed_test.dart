@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import '../widgets.dart';
+import '../components/data_subscription.dart';
 import '../components/speed_gauge.dart';
 import '../components/speed_outbound_card.dart';
 import '../components/speed_test_settings.dart';
@@ -47,13 +48,6 @@ const _providers = <(String, String)>[
   ('apple', 'Apple'),
   ('cloudflare', 'Cloudflare'),
   ('speedtest', 'Speedtest'),
-];
-
-/// The transports, in the order the picker lists them.
-const _protocols = <(String, String)>[
-  ('h1', 'HTTP/1.1'),
-  ('h2', 'HTTP/2'),
-  ('h3', 'HTTP/3'),
 ];
 
 class _SpeedTestPageState extends State<SpeedTestPage>
@@ -363,9 +357,11 @@ class _SpeedTestPageState extends State<SpeedTestPage>
 
   double get _gaugeValue {
     final phase = _phase;
-    if (phase == 'download' || phase == 'upload') {
-      return (_state['speed'] as num? ?? 0).toDouble();
-    }
+    // The kernel's snapshot has no single "speed" field: a live run reports
+    // dlBps/ulBps and the phase says which one the gauge shows. Reading one
+    // shared key here left the needle at 0 for the whole run.
+    if (phase == 'download') return (_state['download'] as num? ?? 0).toDouble();
+    if (phase == 'upload') return (_state['upload'] as num? ?? 0).toDouble();
     if (phase == 'done') return (_state['download'] as num? ?? 0).toDouble();
     return 0;
   }
@@ -384,24 +380,6 @@ class _SpeedTestPageState extends State<SpeedTestPage>
   /// A run needs the core up: the tester dials through the instance's own
   /// outbound, so with the VPN stopped there is nothing to measure through.
   bool get _serviceRunning => context.box.running;
-
-  /// The stored value's label. A preference written by another build (or a
-  /// restored backup) may name a provider this one does not run; the kernel
-  /// coerces it to the default, so the row shows the raw value rather than
-  /// throwing inside build.
-  String get _providerLabel => _providers
-      .firstWhere(
-        (p) => p.$1 == _settings.provider,
-        orElse: () => (_settings.provider, _settings.provider),
-      )
-      .$2;
-
-  String get _protocolLabel => _protocols
-      .firstWhere(
-        (p) => p.$1 == _settings.protocol,
-        orElse: () => (_settings.protocol, _settings.protocol),
-      )
-      .$2;
 
   /// The gauge's caption: what the run is doing, in one word.
   String get _readoutLabel {
@@ -442,7 +420,11 @@ class _SpeedTestPageState extends State<SpeedTestPage>
             'unavailable' => context.tr('The test endpoint is unavailable'),
             _ => error,
           };
-    return Scaffold(
+    // The host only relays `testSession` while the session data is subscribed:
+    // without this the page's read of `box.testSession` would never change, no
+    // matter how long a run went on. BoxDataSubscription owns the visibility
+    // bookkeeping (page activity, app lifecycle), so the page keeps none.
+    return BoxDataSubscription(data: BoxData.testSession, child: Scaffold(
       title: context.tr('Speed test'),
       iconActions: [
         IconButtonData(
@@ -592,36 +574,10 @@ class _SpeedTestPageState extends State<SpeedTestPage>
           ),
           const SizedBox(height: 16),
           _ResultTiles(state: _state),
-          const SizedBox(height: 16),
-          // One row summarising the run, opening the full dialog. The dialog
-          // owns every knob Bettbox's does, so the page does not repeat them.
-          generateSection(
-            title: context.tr('Test settings'),
-            items: [
-              ListItem(
-                leading: const GlyphIcon(AppGlyphs.settings),
-                title: Text(context.tr('Run settings')),
-                subtitle: Text(
-                  [
-                    _providerLabel,
-                    _protocolLabel,
-                    '${_settings.duration}s',
-                    '${_settings.streams} ${context.tr('connections')}',
-                    if (_settings.hasServer) context.tr('Pinned server'),
-                  ].join(' · '),
-                ),
-                onTap: _running ? null : _openSettings,
-              ),
-            ],
-            footer: context.tr(
-              'The test measures through the running core, so start the VPN first.',
-            ),
-          ),
         ],
       ),
-    );
+    ));
   }
-
 }
 
 /// The gauge's centre: the phase label, the big number and its unit.
@@ -683,7 +639,14 @@ class _Legend extends StatelessWidget {
   );
 }
 
-/// The measured figures: delay/jitter, throughput, loaded latency and RPM.
+/// The measured figures: the delay, then the two throughputs.
+///
+/// Bettbox's grid also carries jitter, the loaded latencies and RPM. The kernel's
+/// speed run (`core/mobile/speedtest.go`, relayed by BboxTestSession) measures none
+/// of them — the snapshot has `pingMs`, `dlBps`, `ulBps`, the samples and the
+/// server, nothing else — so those four tiles sat at `—` for the life of every run.
+/// They are gone rather than left as decoration; add each back with the field that
+/// would fill it.
 class _ResultTiles extends StatelessWidget {
   const _ResultTiles({required this.state});
   final Json state;
@@ -693,21 +656,11 @@ class _ResultTiles extends StatelessWidget {
     final scheme = context.colorScheme;
     double value(String key) => (state[key] as num? ?? 0).toDouble();
     final idle = value('latency');
-    final jitter = value('jitter');
-    final loaded = speedLoadedText(
-      value('downloadLatency'),
-      value('uploadLatency'),
-    );
     final tiles = <(String, String, Color)>[
       (
         context.tr('Delay'),
         idle > 0 ? '${idle.round()} ms' : '—',
         scheme.primary,
-      ),
-      (
-        context.tr('Jitter'),
-        jitter > 0 ? '${jitter.round()} ms' : '—',
-        scheme.onSurfaceVariant,
       ),
       (
         context.tr('Download'),
@@ -718,16 +671,6 @@ class _ResultTiles extends StatelessWidget {
         context.tr('Upload'),
         value('upload') > 0 ? speedRateText(value('upload')) : '—',
         scheme.onSurface,
-      ),
-      (
-        context.tr('Loaded latency'),
-        loaded.isEmpty ? '—' : loaded,
-        scheme.onSurfaceVariant,
-      ),
-      (
-        context.tr('RPM'),
-        value('rpm') > 0 ? '${value('rpm').round()}' : '—',
-        scheme.onSurfaceVariant,
       ),
     ];
     return LayoutBuilder(
