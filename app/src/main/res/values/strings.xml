@@ -2307,6 +2307,7 @@
     <string name="validation_xray_network">Spider Client does not support the Xray transport \"%1$s\". Use raw, xhttp, ws, httpupgrade, grpc or xdrive.</string>
     <string name="validation_xray_security">Xray does not support the security \"%1$s\". Use none, tls or reality.</string>
     <string name="validation_xray_reality_network">REALITY works only with the raw, xhttp or grpc transport.</string>
+    <string name="validation_xray_vless_unencrypted_public">VLESS without TLS, REALITY or encryption cannot run on Xray to a public address. Use sing-box VLESS instead.</string>
     <string name="validation_xray_reality_hellogolang">REALITY cannot use the hellogolang fingerprint; choose another one.</string>
     <string name="validation_xray_fingerprint">Xray does not know the fingerprint \"%1$s\". Use chrome, firefox, safari, ios, android, edge, 360, qq, random, randomized or unsafe.</string>
     <string name="validation_xray_cipher_unknown">Xray ignores the unknown cipher suite \"%1$s\".</string>

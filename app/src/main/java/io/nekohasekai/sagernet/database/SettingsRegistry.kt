@@ -351,7 +351,7 @@ object SettingsRegistry {
     @JvmField val CORE_BOX_API_SECRET = string("core_box_api_secret", "")
     @JvmField val CORE_DNS_IN_PORT = int("core_dns_in_port", 5533, SettingValidators::isPort)
     /** 0 XHTTP only, 1 XHTTP and Reality, 2 all VLESS (Const.hpp:70-75). */
-    @JvmField val XRAY_VLESS_PREFERENCE = int("xray_vless_preference", 1) { it in 0..2 }
+    @JvmField val XRAY_VLESS_PREFERENCE = int("xray_vless_preference", 2) { it in 0..2 }
     /** Where geoip.dat / geosite.dat come from when an Xray config needs them (SettingsRepo.h:305-307). */
     @JvmField val XRAY_GEOIP_URL = string("xray_geoip_url", "https://github.com/Loyalsoldier/v2ray-rules-dat/raw/release/geoip.dat")
     @JvmField val XRAY_GEOSITE_URL = string("xray_geosite_url", "https://github.com/Loyalsoldier/v2ray-rules-dat/raw/release/geosite.dat")
