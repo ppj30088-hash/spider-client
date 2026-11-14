@@ -2102,6 +2102,7 @@
     <string name="validation_xray_session_ascii">Die Tabelle darf nur ASCII-Zeichen enthalten.</string>
     <string name="validation_xray_xmux_exclusive">Lege entweder Max. Verbindungen oder Max. Parallelität fest, nicht beides.</string>
     <string name="validation_xray_vless_encryption_none">Schreibe none, wenn der Server keine VLESS-Verschlüsselung verwendet.</string>
+    <string name="validation_xray_vless_unencrypted_public">VLESS ohne TLS, REALITY oder Verschlüsselung kann auf Xray nicht zu einer öffentlichen Adresse laufen. Verwende stattdessen sing-box-VLESS.</string>
     <string name="validation_xray_vless_encryption_format">Muss none sein oder der vom Server genannte mlkem768x25519plus-String.</string>
     <string name="validation_xray_vless_encryption_mode">Der Teil nach mlkem768x25519plus muss native, xorpub oder random sein.</string>
     <string name="validation_xray_vless_encryption_rtt">Der Teil nach dem Modus muss 1rtt oder 0rtt sein.</string>

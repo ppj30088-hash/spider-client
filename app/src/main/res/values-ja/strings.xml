@@ -2073,6 +2073,7 @@
     <string name="validation_xray_session_ascii">テーブルには ASCII 文字のみ使用できます。</string>
     <string name="validation_xray_xmux_exclusive">最大接続数と最大同時実行数は、どちらか一方だけを設定してください。</string>
     <string name="validation_xray_vless_encryption_none">サーバーが VLESS 暗号化を使っていない場合は、none と書いてください。</string>
+    <string name="validation_xray_vless_unencrypted_public">TLS、REALITY、暗号化のない VLESS は、Xray で公開アドレスに接続できません。代わりに sing-box の VLESS を使用してください。</string>
     <string name="validation_xray_vless_encryption_format">none、またはサーバーが示す mlkem768x25519plus 形式の文字列にしてください。</string>
     <string name="validation_xray_vless_encryption_mode">mlkem768x25519plus の後ろの部分は、native、xorpub、random のいずれかにしてください。</string>
     <string name="validation_xray_vless_encryption_rtt">モードの後ろの部分は、1rtt または 0rtt にしてください。</string>

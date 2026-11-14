@@ -2108,6 +2108,7 @@
     <string name="validation_xray_session_ascii">Tablo yalnızca ASCII karakterleri içermelidir.</string>
     <string name="validation_xray_xmux_exclusive">XMUX en fazla bağlantı veya en fazla eşzamanlılıktan yalnızca birini ayarlayın, ikisini birden değil.</string>
     <string name="validation_xray_vless_encryption_none">Sunucu VLESS şifrelemesi kullanmıyorsa none yazın.</string>
+    <string name="validation_xray_vless_unencrypted_public">TLS, REALITY veya şifreleme olmadan VLESS, Xray üzerinde genel bir adrese çalışamaz. Bunun yerine sing-box VLESS kullanın.</string>
     <string name="validation_xray_vless_encryption_format">none veya sunucunun verdiği mlkem768x25519plus dizesi olmalıdır.</string>
     <string name="validation_xray_vless_encryption_mode">mlkem768x25519plus sonrasındaki kısım native, xorpub veya random olmalıdır.</string>
     <string name="validation_xray_vless_encryption_rtt">Moddan sonraki kısım 1rtt veya 0rtt olmalıdır.</string>

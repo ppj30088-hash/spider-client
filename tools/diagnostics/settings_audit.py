@@ -141,10 +141,16 @@ RESTORE_ONLY = {
 
 # Desktop presets that Throne for Android deliberately does not surface (decision D8).
 # They remain valid bridge keys for restore compatibility but have no Android control.
+# Retired Android keys belong here too when the key must stay in the schema so old
+# backups still restore, but no settings page edits it any more.
 ANDROID_OMITTED = {
     "tlsSpoof",
     "tlsSpoofDefaultOn",
     "tlsSpoofMethod",
+    # Spider Client: the Xray VLESS preference is retired — every VLESS import now
+    # runs on Xray, so no settings page edits this key. It stays in the schema
+    # (and its snake_case store row in RESTORE_ONLY) so old backups still restore.
+    "xrayVlessPreference",
 }
 
 # Every book the three-way diff consults before it names a store key as a gap.

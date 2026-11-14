@@ -2110,6 +2110,7 @@
     <string name="validation_xray_session_ascii">La table ne doit contenir que des caractères ASCII.</string>
     <string name="validation_xray_xmux_exclusive">Définissez soit Connexions max, soit Concurrence max, pas les deux.</string>
     <string name="validation_xray_vless_encryption_none">Écrivez none lorsque le serveur n\'utilise pas le chiffrement VLESS.</string>
+    <string name="validation_xray_vless_unencrypted_public">VLESS sans TLS, REALITY ou chiffrement ne peut pas fonctionner sur Xray vers une adresse publique. Utilisez VLESS avec sing-box à la place.</string>
     <string name="validation_xray_vless_encryption_format">Doit être none, ou la chaîne mlkem768x25519plus fournie par le serveur.</string>
     <string name="validation_xray_vless_encryption_mode">La partie après mlkem768x25519plus doit être native, xorpub ou random.</string>
     <string name="validation_xray_vless_encryption_rtt">La partie après le mode doit être 1rtt ou 0rtt.</string>
