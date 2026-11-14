@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../widgets.dart';
 import '../components/data_subscription.dart';
 import '../components/group_tabs.dart';
@@ -13,6 +15,12 @@ class ProxiesPage extends StatefulWidget {
   State<ProxiesPage> createState() => _ProxiesPageState();
 }
 
+/// Preferences key for the node chosen per configuration. The native side
+/// keeps one global selected proxy, so switching a configuration selects its
+/// first member and forgets what the previous one used. Remember the choice
+/// here and replay it when that configuration becomes active again.
+const _proxySelectedKey = 'proxySelected';
+
 class _ProxiesPageState extends State<ProxiesPage>
     with TickerProviderStateMixin {
   String _query = '';
@@ -26,6 +34,13 @@ class _ProxiesPageState extends State<ProxiesPage>
   final _selectedOffsets = <String, double>{};
   String? _currentGroup;
   BoxController? _box;
+  // One restore attempt per configuration entry; reset when the active id
+  // changes so switching away and back replays the remembered node.
+  String? _restoredFor;
+
+  String _profileKey(BoxController box) => box.remote
+      ? 'remote:${box.dashboard['remote']}'
+      : 'local:${box.selectedProfileId}';
 
   /// Drives the group tab strip and its pages. Rebuilt when the group list
   /// changes, because prism's controller owns a fixed length.
@@ -57,13 +72,13 @@ class _ProxiesPageState extends State<ProxiesPage>
       _box = context.box;
       // The node rows are the largest payload the bridge carries, so they only travel while this
       // screen is open; every other screen renders the group counts.
-      _box!.groupsSetVisible(true);
+      _box!.setGroupsVisible(this, true);
     }
   }
 
   @override
   void dispose() {
-    _box?.groupsSetVisible(false);
+    _box?.setGroupsVisible(this, false);
     _tabs?.dispose();
     for (final scroll in _scrolls.values) {
       scroll.dispose();
@@ -172,9 +187,86 @@ class _ProxiesPageState extends State<ProxiesPage>
       return;
     }
     if (await box.groupSelect(group['tag'], node['tag'], nodeId: nodeId)) {
+      await _rememberSelection(box, group, node);
       if (box.preferences['closeConnectionsOnSelect'] == true) {
         await box.connectionsCloseAll();
       }
+    }
+  }
+
+  /// Only a real user tap records a choice. The native first-member fallback
+  /// that runs on a configuration switch must never overwrite this memory.
+  Future<void> _rememberSelection(BoxController box, Json group, Json node) async {
+    final key = _profileKey(box);
+    final saved = json(box.preferences[_proxySelectedKey]);
+    saved[key] = {
+      'group': group['tag'],
+      'id': node['id'],
+      'tag': node['tag'],
+    };
+    while (saved.length > 64) {
+      saved.remove(saved.keys.first);
+    }
+    await box.setPreference(_proxySelectedKey, saved);
+  }
+
+  /// Re-issues the remembered node selection for the configuration that just
+  /// became active. The host has a single global slot and selects the target
+  /// group's first member on a switch, so without this an A -> B -> A trip
+  /// forgets the node A was using.
+  Future<void> _maybeRestore(
+    BoxController box,
+    List<Json> groups,
+  ) async {
+    if (box.remote || box.selectedProfileId <= 0 || box.transitioning) return;
+    final key = _profileKey(box);
+    if (_restoredFor == key) return;
+    final memory = json(box.preferences[_proxySelectedKey])[key];
+    if (memory is! Map) {
+      // Nothing remembered for this configuration; do not retry on every frame.
+      _restoredFor = key;
+      return;
+    }
+    final groupTag = memory['group'];
+    final group = groups
+        .cast<Json?>()
+        .firstWhere(
+          (group) => group?['tag'] == groupTag && group?['selectable'] == true,
+          orElse: () => null,
+        );
+    // The group itself may arrive in a later catalog generation (counts-only
+    // first). Leave the attempt open until its rows are present.
+    if (group == null) return;
+    // `groupSelect` reports success even when the native side no-ops, so the
+    // existence guard has to live here. Prefer the id, then the tag — the same
+    // precedence the native resolver uses.
+    final nodes = rows(group['items']);
+    final rememberedId = (memory['id'] as num?)?.toInt();
+    final rememberedTag = memory['tag'];
+    final node = nodes.cast<Json?>().firstWhere(
+          (node) => rememberedId != null &&
+              (node?['id'] as num?)?.toInt() == rememberedId,
+          orElse: () => nodes.cast<Json?>().firstWhere(
+                (node) => node?['tag'] == rememberedTag,
+                orElse: () => null,
+              ),
+        );
+    if (node == null) {
+      // A subscription refresh or rename removed this node; nothing to restore.
+      _restoredFor = key;
+      return;
+    }
+    final selectedId = (group['selectedId'] as num?)?.toInt();
+    final nodeId = (node['id'] as num?)?.toInt();
+    if (selectedId != null && nodeId != null
+        ? selectedId == nodeId
+        : node['tag'] == group['selected']) {
+      _restoredFor = key; // already live; avoid an extra core reload
+      return;
+    }
+    _restoredFor = key;
+    if (await box.groupSelect(group['tag'], node['tag'], nodeId: nodeId)) {
+      if (mounted) setState(() => _currentGroup = group['tag'] as String?);
     }
   }
 
@@ -422,16 +514,41 @@ class _ProxiesPageState extends State<ProxiesPage>
   Widget build(BuildContext context) {
     final box = context.watchBox(BoxAspect.state);
     _session = context.watchBox(BoxAspect.testSession).testSession;
-    // The screen follows the configuration selection: whichever profile is selected, its nodes are
-    // what shows here. A selection that names nothing on the wire (or none yet) falls back to all.
+    // The screen follows the configuration selection: whichever profile is
+    // selected, its nodes are what shows here. The selection marker rides in
+    // the same `groups` event as the rows (`selectedId` is non-zero only on the
+    // group holding the selected member), so derive the filter from that event
+    // itself. `dashboard.selectedProfileId` is a separate event that can still
+    // be from the previous generation when this frame builds; using it as the
+    // primary filter is what made the two screens disagree intermittently.
     final selectedId = box.selectedProfileId;
     final allGroups = box.groups;
-    final picked = selectedId > 0
+    final owning = allGroups
+        .where((group) => ((group['selectedId'] as num?)?.toInt() ?? 0) > 0)
+        .toList();
+    final carriesIds = allGroups.any((group) => group['id'] != null);
+    final byId = selectedId > 0
         ? allGroups
-              .where((group) => (group['id'] as num?)?.toInt() == selectedId)
-              .toList()
-        : allGroups;
-    final groups = picked.isEmpty ? allGroups : picked;
+            .where((group) => (group['id'] as num?)?.toInt() == selectedId)
+            .toList()
+        : const <Json>[];
+    // Prefer the marker that rides in the same event as the rows. When the
+    // catalog does carry ids but none belongs to the just-selected
+    // configuration, this is a stale generation: show the empty state rather
+    // than silently widening to the previous configuration's groups. A
+    // counts-only payload (no ids at all) cannot be filtered, so keep all of
+    // its groups until the full catalog arrives.
+    final groups = owning.isNotEmpty
+        ? owning
+        : byId.isNotEmpty
+            ? byId
+            : !carriesIds || selectedId <= 0
+                ? allGroups
+                : const <Json>[];
+    // Restore outside build(): a channel call here would run during the frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_maybeRestore(context.box, groups));
+    });
     final liveTags = groups.map((group) => group['tag'].toString()).toSet();
     _selectedOffsets.removeWhere((tag, _) => !liveTags.contains(tag));
     if (_scrolls.keys.any((tag) => !liveTags.contains(tag))) {

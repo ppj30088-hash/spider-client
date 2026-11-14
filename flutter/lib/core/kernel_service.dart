@@ -775,7 +775,11 @@ class KernelService {
       'value': {
         ...previous,
         'status': effectiveStatus,
-        'selectedProfileId': selectedId,
+        // The selected group id is channel-owned (BboxCatalog.selectedGroupId).
+        // Re-emitting a copy of `previous` here could overwrite a fresh channel
+        // dashboard that arrived while a long reload was in flight, leaving the
+        // Proxies screen filtered to the previous configuration. `...previous`
+        // already carries the authoritative value.
         'selectedProfileName': name,
         'modes': previous['modes'] ?? ['rule', 'global', 'direct'],
         'mode': mode ?? previous['mode'] ?? 'rule',
