@@ -351,6 +351,8 @@ const _zh = <String, String>{
   'Connectivity': '连通性',
   'Checking connection': '正在检查连接',
   'Connected': '已连接',
+  'Finding a route…': '正在寻找路线…',
+  'Finds a route by itself — no config needed.': '自动寻找路线，无需任何设置。',
   'Connection failed': '连接失败',
   'WebDAV configuration': 'WebDAV 配置', 'Account': '账户',
   'Invalid backup file name': '无效的备份文件名', 'Optional': '可选',

@@ -22,12 +22,23 @@ class _AetherPanelState extends State<AetherPanel> {
   String? _error;
   bool _busy = false;
   Timer? _timer;
+  BoxController? _box;
 
   @override
   void initState() {
     super.initState();
-    _refresh();
     _timer = Timer.periodic(const Duration(seconds: 2), (_) => _refresh());
+  }
+
+  // context.box is an inherited widget: it cannot be read in initState.
+  // The first didChangeDependencies runs right after, with the scope mounted.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_box == null) {
+      _box = context.box;
+      _refresh();
+    }
   }
 
   @override
@@ -37,9 +48,10 @@ class _AetherPanelState extends State<AetherPanel> {
   }
 
   Future<void> _refresh() async {
-    if (!mounted || context.box.remote) return;
+    final box = _box;
+    if (!mounted || box == null || box.remote) return;
     try {
-      final status = json(await context.box.aetherStatus());
+      final status = json(await box.aetherStatus());
       if (!mounted) return;
       setState(() {
         _status = status;
