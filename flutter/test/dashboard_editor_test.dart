@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flrone/main.dart';
 import 'package:flrone/widgets.dart';
-import 'package:flrone/components/dashboard_editor.dart';
 import 'package:flrone/components/status_panel.dart';
 import 'package:flrone/pages/dashboard.dart';
 import 'package:flrone/pages/tools.dart';
