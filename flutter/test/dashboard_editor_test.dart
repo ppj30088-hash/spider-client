@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flrone/main.dart';
 import 'package:flrone/widgets.dart';
-import 'package:flrone/components/dashboard_editor.dart';
 import 'package:flrone/components/status_panel.dart';
+import 'package:flrone/pages/dashboard.dart';
 import 'package:flrone/pages/tools.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -85,7 +85,12 @@ void main() {
       expect(find.byTooltip('Remove Connections'), findsNothing);
       expect(find.byTooltip('Add Connections'), findsNothing);
       if (scenario == 'reorder') {
-        final handle = find.byType(ReorderableDelayedDragStartListener).at(1);
+        // The rows follow the page's shown order: the saved list, or the
+        // defaults when the test leaves it unset. The card under test is not
+        // always second (Aether sits between Status and the rest by default),
+        // so take the handle at the card's own position.
+        final shown = (preferences['dashboardCards'] as List?)?.cast<String>() ?? defaultDashboardCards;
+        final handle = find.byType(ReorderableDelayedDragStartListener).at(shown.indexOf(card));
         // The centre of this tall card can sit behind the navigation bar.
         // Start on its visible upper part, as a finger would on a phone.
         final start = tester.getTopLeft(handle) + const Offset(80, 40);
@@ -187,6 +192,15 @@ void main() {
         expect(find.byType(DashboardEditor), findsOneWidget);
         expect(find.byTooltip('Done').hitTestable(), findsOneWidget);
         expect(find.byType(HomePage), findsOneWidget);
+        // The editor reopens at the saved scroll offset, which can leave the
+        // first card unbuilt until it is scrolled back into view (upwards).
+        // The card is wrapped in AbsorbPointer, so it is never hit-testable:
+        // only check that it is built again.
+        await tester.scrollUntilVisible(find.byType(StatusPanel), -250,
+          scrollable: find.ancestor(of: find.byType(DashboardEditor), matching: find.byType(Scrollable)).first);
+        await Scrollable.ensureVisible(tester.element(find.byType(StatusPanel)), alignment: .5);
+        await advance();
+        expect(find.byType(StatusPanel), findsOneWidget);
         expect(tester.state(find.byType(StatusPanel)), same(status));
         await tester.tap(find.byTooltip('Done'));
         await tester.pumpAndSettle();

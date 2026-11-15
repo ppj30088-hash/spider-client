@@ -15,6 +15,7 @@ import io.nekohasekai.sagernet.aidl.ISagerNetService
 import io.nekohasekai.sagernet.aidl.ISagerNetServiceCallback
 import io.nekohasekai.sagernet.aidl.LiveStatsBatch
 import io.nekohasekai.sagernet.appwidget.Widgets
+import io.flrone.bridge.AetherRunner
 import io.nekohasekai.sagernet.bg.autoselector.AutoSelectorRuntime
 import io.nekohasekai.sagernet.bg.proto.DeferredRuleSets
 import io.nekohasekai.sagernet.bg.proto.LocalDnsFailedException
@@ -356,6 +357,13 @@ class BaseService {
                 recordCleanupFailure("wifi-monitor-stop", error)
             } finally {
                 data.wifiMonitor = null
+            }
+            // The helper belongs to the run, not to the process: a stop that
+            // leaves it running would keep a tunnel open with no VPN to feed it.
+            try {
+                AetherRunner.stop()
+            } catch (error: Throwable) {
+                recordCleanupFailure("aether-stop", error)
             }
 
             try {
@@ -749,7 +757,14 @@ class BaseService {
                         return@launch
                     }
                     preInit()
-                    withContext(coreDispatcher) { proxy.init() }
+                    withContext(coreDispatcher) {
+                        // An Aether start brings its own helper up first: the
+                        // core's SOCKS outbound only answers while the helper
+                        // process runs. A failure here fails the start with the
+                        // helper's message, like a missing geo asset would.
+                        AetherRunner.startIfNeeded(profile = profile)
+                        proxy.init()
+                    }
                     DataStore.currentProfile = profile.id
                     DataStore.runningProfiles = proxy.config.involvedProfileIds.map { it.toString() }
                     DataStore.runningRouteId = proxy.routeId

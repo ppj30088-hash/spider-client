@@ -30,6 +30,17 @@ inputs:
 runs:
   using: composite
   steps:
+    # The runner image ships several GB of toolchains this build never uses
+    # (.NET alone is ~2 GB); the Go core + Flutter + Gradle build fills the
+    # disk to the edge and the Gradle cache save then fails with "No space
+    # left on device" (seen on CI runs 43655513522 and 43662146934). Free that
+    # space up front. The Android SDK and the tool caches stay untouched.
+    - name: Free disk space
+      shell: bash
+      run: |
+        df -h / | tail -1
+        sudo rm -rf /usr/share/dotnet
+        df -h / | tail -1
     - name: Setup Java
       uses: actions/setup-java@v6
       with:
@@ -42,7 +53,6 @@ runs:
     - name: Install NDK
       shell: bash
       run: |
-        exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
         set -euo pipefail
         for attempt in 1 2 3; do
           # printf, not yes: `yes |` dies of a broken pipe when sdkmanager stops reading,
@@ -69,7 +79,6 @@ runs:
       if: inputs.reuse-inputs != 'true'
       shell: bash
       run: |
-        exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
         set -euo pipefail
         cd flutter
         flutter pub get
@@ -91,7 +100,6 @@ runs:
       if: inputs.reuse-inputs == 'true'
       shell: bash
       run: |
-        exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
         set -euo pipefail
         missing=0
         check() {
@@ -114,7 +122,6 @@ runs:
         THRONE_BUILD: ${{ inputs.build-number }}
         THRONE_SIGN: ${{ inputs.sign }}
       run: |
-        exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
         set -euo pipefail
         if [ "$THRONE_SIGN" = "true" ]; then
           if [ -n "${SIGNING_KEYSTORE_B64:-}" ]; then

@@ -80,7 +80,7 @@ object LogExport {
             else -> "on (best effort: review before sharing)"
         }
         return buildString {
-            appendLine("===== spider client log export =====")
+            appendLine("===== Spider Client log export =====")
             appendLine("exported  : ${utc.format(Date())}")
             appendLine(
                 "app       : ${SagerNet.appVersionNameForDisplay} (versionCode ${BuildConfig.VERSION_CODE}), " +

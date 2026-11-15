@@ -8,7 +8,6 @@ runs:
     - name: Fetch sing-box dashboard
       shell: bash
       run: |
-        exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
         set -euo pipefail
         DEST=app/src/main/assets/sb-dashboard
         rm -rf "$DEST"

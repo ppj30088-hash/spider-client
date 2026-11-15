@@ -6,6 +6,7 @@ import '../widgets.dart';
 import '../components/dashboard_editor.dart';
 
 import '../components/connected_buttons.dart';
+import '../components/aether_panel.dart';
 import '../components/status_panel.dart';
 import '../components/memory_panel.dart';
 import '../components/speed_gauge.dart';
@@ -17,8 +18,8 @@ import '../components/system_proxy_panel.dart';
 
 export '../components/dashboard_editor.dart' show DashboardEditor;
 
-const dashboardCards = ['Status', 'Network speed', 'Outbound mode', 'Current profile', 'Proxy groups', 'Memory', 'Intranet IP', 'Network takeover', 'Service status'];
-const defaultDashboardCards = ['Status', 'Network speed', 'Outbound mode', 'Current profile', 'Proxy groups'];
+const dashboardCards = ['Status', 'Aether', 'Network speed', 'Outbound mode', 'Current profile', 'Proxy groups', 'Memory', 'Intranet IP', 'Network takeover', 'Service status'];
+const defaultDashboardCards = ['Status', 'Aether', 'Network speed', 'Outbound mode', 'Current profile', 'Proxy groups'];
 const defaultHiddenCards = ['Memory', 'Intranet IP'];
 
 List<String> dashboardOrder(Json prefs) {
@@ -46,6 +47,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final showServiceStatus = box.capabilities.known && box.capabilities.of('serviceStatus') && !hidden.contains('Service status');
     return <String, Widget>{
       'Status': const StatusPanel(),
+      'Aether': const AetherPanel(),
       if (showServiceStatus) 'Service status': const ServiceStatusPanel(),
       if (box.capabilities.of('lanProxy')) 'Intranet IP': const IntranetPanel(),
       'Network speed': const _SpeedPanel(),

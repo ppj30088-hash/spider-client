@@ -2172,6 +2172,7 @@
     <string name="validation_xray_session_ascii">Таблица должна содержать только символы ASCII.</string>
     <string name="validation_xray_xmux_exclusive">Задайте либо «Макс. соединений XMUX», либо «Макс. одновременных XMUX», но не оба.</string>
     <string name="validation_xray_vless_encryption_none">Укажите none, если сервер не использует шифрование VLESS.</string>
+    <string name="validation_xray_vless_unencrypted_public">VLESS без TLS, REALITY или шифрования не может работать в Xray с публичным адресом. Используйте VLESS с sing-box.</string>
     <string name="validation_xray_vless_encryption_format">Должно быть none или строкой mlkem768x25519plus, которую выдаёт сервер.</string>
     <string name="validation_xray_vless_encryption_mode">Часть после mlkem768x25519plus должна быть native, xorpub или random.</string>
     <string name="validation_xray_vless_encryption_rtt">Часть после режима должна быть 1rtt или 0rtt.</string>

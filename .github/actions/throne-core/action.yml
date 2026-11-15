@@ -9,7 +9,6 @@ runs:
     - name: Read core pin
       shell: bash
       run: |
-        exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
         set -euo pipefail
         REF=$(sed -n 's/^THRONE_CORE_REF=//p' nb4a.properties | tr -d '\r[:space:]')
         test -n "$REF"
@@ -29,7 +28,6 @@ runs:
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
         set -euo pipefail
         THRONE_DIR="$(dirname "$GITHUB_WORKSPACE")/Throne"
         rm -rf "$THRONE_DIR"
@@ -42,7 +40,6 @@ runs:
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
         set -euo pipefail
         # Additive only: the throne_* C ABI lands in core/mobile so the AAR's
         # shared library exports it for Dart FFI and the android/core JNI shim.
@@ -71,7 +68,6 @@ runs:
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
         set -euo pipefail
         echo y | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358"
         echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.2.13676358" >> "$GITHUB_ENV"
@@ -79,7 +75,6 @@ runs:
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
         set -euo pipefail
         go install github.com/sagernet/gomobile/cmd/gomobile@v0.1.13
         go install github.com/sagernet/gomobile/cmd/gobind@v0.1.13
@@ -96,7 +91,6 @@ runs:
       shell: bash
       working-directory: ${{ env.THRONE_DIR }}/core
       run: |
-        exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
         set -euo pipefail
         TAGS=$(sed -n 's/^TAGS="\(.*\)"$/\1/p' ../script/build_android.sh)
         test -n "$TAGS"
@@ -106,7 +100,6 @@ runs:
     - name: Verify ThroneCore AAR and schema
       shell: bash
       run: |
-        exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
         set -euo pipefail
         test -s app/libs/ThroneCore.aar
         unzip -l app/libs/ThroneCore.aar > "$RUNNER_TEMP/throne-core-aar.txt"

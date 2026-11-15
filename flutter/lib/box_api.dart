@@ -500,6 +500,17 @@ extension ServiceApi on BoxController {
   }
 }
 
+extension AetherApi on BoxController {
+  /// Creates the Aether group and SOCKS profile when missing; returns their ids.
+  Future<dynamic> aetherEnsure() => call('aether.ensure');
+  /// Starts the helper binary when the selected profile is Aether; a no-op otherwise.
+  Future<dynamic> aetherStart() => call('aether.start');
+  /// Stops the helper when it runs; a no-op otherwise.
+  Future<dynamic> aetherStop() => call('aether.stop');
+  /// The helper's state: process, proxy, uptime and last log lines.
+  Future<dynamic> aetherStatus() => call('aether.status');
+}
+
 extension CaptureApi on BoxController {
   Future<bool> captureExport(Json args) => act('capture.export', args);
   Future<dynamic> captureSettings() => call('capture.settings');

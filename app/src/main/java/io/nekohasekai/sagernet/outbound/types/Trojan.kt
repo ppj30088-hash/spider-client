@@ -8,6 +8,12 @@ import io.nekohasekai.sagernet.outbound.Outbound
 import io.nekohasekai.sagernet.outbound.common.Multiplex
 import io.nekohasekai.sagernet.outbound.common.Tls
 import io.nekohasekai.sagernet.outbound.common.Transport
+import io.nekohasekai.sagernet.outbound.common.XrayMultiplex
+import io.nekohasekai.sagernet.outbound.common.XrayStreamSetting
+import io.nekohasekai.sagernet.outbound.common.supportsXrayStream
+import io.nekohasekai.sagernet.outbound.common.toXrayMultiplex
+import io.nekohasekai.sagernet.outbound.common.toXrayStream
+import io.nekohasekai.sagernet.outbound.common.xraySecurity
 import io.nekohasekai.sagernet.outbound.common.tlsForTransport
 import io.nekohasekai.sagernet.outbound.json.JsonObject
 import io.nekohasekai.sagernet.outbound.link.LinkBuilder
@@ -32,6 +38,21 @@ class Trojan : Outbound("trojan") {
     override fun getTls(): Tls = tls
     override fun getMux(): Multiplex = multiplex
     override fun getTransport(): Transport = transport
+
+    /**
+     * Trojan runs on Xray when it has TLS or REALITY: Xray v26.7+ refuses an unencrypted Trojan
+     * outbound to a public address when the config loads, which would stop the whole Xray core.
+     * A TLS-less Trojan, and a TLS block and transport Xray cannot run ([supportsXrayStream]),
+     * stay on sing-box, which carries them as before.
+     */
+    override fun isXray(): Boolean {
+        if (!tls.supportsXrayStream(transport)) return false
+        return tls.xraySecurity() != "none"
+    }
+
+    override fun hasXrayStream(): Boolean = isXray()
+    override fun getXrayStream(): XrayStreamSetting = tls.toXrayStream(transport)
+    override fun getXrayMultiplex(): XrayMultiplex = multiplex.toXrayMultiplex()
 
     /** Trojan::ParseFromLink (trojan.cpp): port 443 by default, TLS is not forced on, always true for a parsable URL. */
     override fun parseFromLink(link: String): Boolean {
@@ -114,6 +135,22 @@ class Trojan : Outbound("trojan") {
         if (transportObj.isNotEmpty()) obj["transport"] = transportObj
         val muxObj = multiplex.build(ctx)
         if (muxObj.isNotEmpty()) obj["multiplex"] = muxObj
+        return BuildResult(obj)
+    }
+
+    /** Trojan::BuildXray: the simplified Xray shape (`address`, `port`, `password`); Xray has no `flow` for Trojan. */
+    override fun buildXray(ctx: BuildContext): BuildResult {
+        val obj = JsonObject()
+        obj["protocol"] = "trojan"
+        val settings = JsonObject()
+        settings["address"] = server
+        settings["port"] = serverPort
+        settings["password"] = password
+        obj["settings"] = settings
+        val streamObj = tls.toXrayStream(transport).build(ctx)
+        if (streamObj.isNotEmpty()) obj["streamSettings"] = streamObj
+        val muxObj = multiplex.toXrayMultiplex().buildMux(ctx, ctx.xrayMuxDefaultOn)
+        if (muxObj.isNotEmpty()) obj["mux"] = muxObj
         return BuildResult(obj)
     }
 

@@ -2106,6 +2106,7 @@
     <string name="validation_xray_session_ascii">Tabellen kan bare inneholde ASCII-tegn.</string>
     <string name="validation_xray_xmux_exclusive">Sett enten Max Connections eller Max Concurrency, ikke begge.</string>
     <string name="validation_xray_vless_encryption_none">Skriv none når tjeneren ikke bruker VLESS-kryptering.</string>
+    <string name="validation_xray_vless_unencrypted_public">VLESS uten TLS, REALITY eller kryptering kan ikke kjøre på Xray mot en offentlig adresse. Bruk sing-box-VLESS i stedet.</string>
     <string name="validation_xray_vless_encryption_format">Må være none, eller mlkem768x25519plus-strengen tjeneren gir.</string>
     <string name="validation_xray_vless_encryption_mode">Delen etter mlkem768x25519plus må være native, xorpub eller random.</string>
     <string name="validation_xray_vless_encryption_rtt">Delen etter modusen må være 1rtt eller 0rtt.</string>

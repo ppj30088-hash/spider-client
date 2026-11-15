@@ -35,6 +35,8 @@ import io.nekohasekai.sagernet.ui.json.engine.JsonFormatter
 import io.nekohasekai.sagernet.update.UpdateChecker
 import moe.matsuri.nb4a.utils.LogRedactor
 import moe.matsuri.nb4a.utils.CoreLog
+import io.flrone.bridge.AetherProfiles
+import io.flrone.bridge.AetherRunner
 import io.flrone.bridge.BboxActions
 import io.flrone.bridge.BboxApi
 import io.flrone.bridge.BboxApps
@@ -1053,6 +1055,26 @@ class ThroneBoxBridge(
                 "config.warpParams" -> result.success(
                     WarpClient.registerParams(call.argument<String>("tunnelType").orEmpty()),
                 )
+                // Aether: the helper process and its profile. `start` blocks
+                // until the local SOCKS5 proxy answers (or fails with the
+                // helper's last log lines); the Dart start calls it before the
+                // core comes up, and `stop` is a no-op when nothing runs.
+                "aether.ensure" -> result.respondIo { AetherProfiles.ensure() }
+                "aether.start" -> result.respondIo {
+                    val profile = SagerDatabase.proxyDao.getById(DataStore.selectedProxy)
+                    if (profile != null && AetherRunner.isAetherProfile(profile)) {
+                        AetherRunner.start()
+                    } else {
+                        mapOf("needed" to false, "running" to AetherRunner.isProcessAlive())
+                    }
+                }
+                "aether.stop" -> result.respondIo {
+                    AetherRunner.stop()
+                    mapOf("running" to false)
+                }
+                "aether.status" -> result.respondIo {
+                    AetherRunner.status() + mapOf("selected" to AetherProfiles.isSelected())
+                }
                 "state.setMode" -> {
                     BboxKernel.setMode(call.argument<String>("mode") ?: error("Missing mode"))
                     result.success(null)
