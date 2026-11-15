@@ -30,6 +30,17 @@ inputs:
 runs:
   using: composite
   steps:
+    # The runner image ships several GB of toolchains this build never uses
+    # (.NET alone is ~2 GB); the Go core + Flutter + Gradle build fills the
+    # disk to the edge and the Gradle cache save then fails with "No space
+    # left on device" (seen on CI runs 43655513522 and 43662146934). Free that
+    # space up front. The Android SDK and the tool caches stay untouched.
+    - name: Free disk space
+      shell: bash
+      run: |
+        df -h / | tail -1
+        sudo rm -rf /usr/share/dotnet
+        df -h / | tail -1
     - name: Setup Java
       uses: actions/setup-java@v6
       with:
