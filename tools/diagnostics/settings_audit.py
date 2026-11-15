@@ -65,6 +65,7 @@ NON_SETTING = {
     "route_auto_update_last",   # update timestamps
     "sub_auto_update_last",
     "profileId",                # DataStore.selectedProxy: the started node
+    "aetherProfileId",          # DataStore.aetherProfileId: the Aether node
     "profileCurrent",           # service bookkeeping
     "profileDirty",
     "profileGroup",
