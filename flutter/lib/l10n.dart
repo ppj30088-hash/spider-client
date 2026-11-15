@@ -352,6 +352,8 @@ const _zh = <String, String>{
   'Checking connection': '正在检查连接',
   'Connected': '已连接',
   'Finding a route…': '正在寻找路线…',
+  'No working route': '无可用路线',
+  'Try another route': '换条路线',
   'Finds a route by itself — no config needed.': '自动寻找路线，无需任何设置。',
   'Connection failed': '连接失败',
   'WebDAV configuration': 'WebDAV 配置', 'Account': '账户',

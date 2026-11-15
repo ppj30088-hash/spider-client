@@ -1072,6 +1072,7 @@ class ThroneBoxBridge(
                     AetherRunner.stop()
                     mapOf("running" to false)
                 }
+                "aether.rescan" -> result.respondIo { AetherRunner.rescan() }
                 "aether.status" -> result.respondIo {
                     AetherRunner.status() + mapOf("selected" to AetherProfiles.isSelected())
                 }

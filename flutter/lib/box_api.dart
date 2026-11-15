@@ -507,6 +507,8 @@ extension AetherApi on BoxController {
   Future<dynamic> aetherStart() => call('aether.start');
   /// Stops the helper when it runs; a no-op otherwise.
   Future<dynamic> aetherStop() => call('aether.stop');
+  /// Restarts the helper with a fresh scan, ignoring any cached last-working gateway.
+  Future<dynamic> aetherRescan() => call('aether.rescan');
   /// The helper's state: process, proxy, uptime and last log lines.
   Future<dynamic> aetherStatus() => call('aether.status');
 }

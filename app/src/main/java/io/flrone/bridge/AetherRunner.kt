@@ -97,8 +97,17 @@ object AetherRunner {
      * the helper's last log lines when it dies or never comes up. The process
      * table is only locked for the hand-over, never for the wait, so the UI's
      * status polls keep answering while a start scans.
+     *
+     * The invocation is hardened for strict networks (Aether's own guide
+     * prescribes each of these for Iran): HTTP/2 over TCP instead of
+     * QUIC/UDP, fragment the TLS ClientHello so SNI-based resets do not kill
+     * the WARP API calls, the heaviest MASQUE obfuscation profile, and a
+     * scan that only trusts a gateway after a real HTTP request crossed it —
+     * the plain balanced scan trusted gateways on a handshake, which is how
+     * a dead route looked "connected" while no traffic flowed. [freshScan]
+     * also ignores the cached last-working gateway and scans from scratch.
      */
-    fun start(context: Context = app): Map<String, Any?> {
+    fun start(context: Context = app, freshScan: Boolean = false): Map<String, Any?> {
         val proc: Process
         val startMs: Long
         synchronized(this) {
@@ -107,15 +116,21 @@ object AetherRunner {
             val binary = resolveBinary(context)
             val dir = dataDir(context)
             val log = logFile(context)
-            val command = listOf(
-                binary.absolutePath,
-                "--masque",
-                "--scan", "balanced",
-                "--bind", "$SOCKS_HOST:$SOCKS_PORT",
-                "--config", File(dir, "aether.toml").absolutePath,
-                "--masque-config", File(dir, "aether-masque.toml").absolutePath,
-                "--wg-config", File(dir, "aether-wg.toml").absolutePath,
-            )
+            val command = buildList {
+                add(binary.absolutePath)
+                add("--masque")
+                add("--h2")
+                add("--fragment")
+                add("--noize"); add("gfw")
+                add("--scan"); add("ironclad")
+                add("--startup-secs"); add("90")
+                add("--validate-secs"); add("20")
+                if (freshScan) add("--no-quick-reconnect")
+                add("--bind"); add("$SOCKS_HOST:$SOCKS_PORT")
+                add("--config"); add(File(dir, "aether.toml").absolutePath)
+                add("--masque-config"); add(File(dir, "aether-masque.toml").absolutePath)
+                add("--wg-config"); add(File(dir, "aether-wg.toml").absolutePath)
+            }
             Logs.i("aether: starting ${binary.absolutePath}")
             proc = ProcessBuilder(command)
                 .directory(dir)
@@ -145,6 +160,12 @@ object AetherRunner {
         }
         stop()
         error("Aether did not open its local proxy in time")
+    }
+
+    /** Stops the helper and starts it again with a fresh scan, ignoring any cached last-working gateway. */
+    fun rescan(context: Context = app): Map<String, Any?> {
+        stop()
+        return start(context, freshScan = true)
     }
 
     /** Stops the helper when it runs; a no-op otherwise. */
