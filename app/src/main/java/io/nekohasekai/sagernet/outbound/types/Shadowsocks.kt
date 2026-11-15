@@ -9,11 +9,6 @@ import io.nekohasekai.sagernet.outbound.QtStrings
 import io.nekohasekai.sagernet.outbound.SecurityInfo
 import io.nekohasekai.sagernet.outbound.SecurityLevel
 import io.nekohasekai.sagernet.outbound.common.Multiplex
-import io.nekohasekai.sagernet.outbound.common.XrayMultiplex
-import io.nekohasekai.sagernet.outbound.common.XrayStreamSetting
-import io.nekohasekai.sagernet.outbound.common.toXrayMultiplex
-import io.nekohasekai.sagernet.outbound.common.xrayShadowsocksMethods
-import io.nekohasekai.sagernet.outbound.json.JsonArray
 import io.nekohasekai.sagernet.outbound.json.JsonObject
 import io.nekohasekai.sagernet.outbound.link.Base64Strict
 import io.nekohasekai.sagernet.outbound.link.LinkBuilder
@@ -146,24 +141,6 @@ class Shadowsocks : Outbound("shadowsocks") {
 
     override fun hasMux(): Boolean = true
     override fun getMux(): Multiplex = multiplex
-
-    /**
-     * Shadowsocks runs on Xray when Xray can carry the cipher without a plugin: Xray has no
-     * SIP003 plugin support, no stream ciphers and no `none` method left, and a 2022 method with
-     * several colon-separated keys is one key too many for it. Those profiles stay on sing-box,
-     * which carries them as before. The stream is always plain TCP: a Shadowsocks profile has no
-     * TLS or transport of its own.
-     */
-    override fun isXray(): Boolean {
-        if (plugin.isNotEmpty()) return false
-        if (method !in xrayShadowsocksMethods) return false
-        if (method.startsWith("2022-") && password.contains(':')) return false
-        return true
-    }
-
-    override fun hasXrayStream(): Boolean = isXray()
-    override fun getXrayStream(): XrayStreamSetting = XrayStreamSetting()
-    override fun getXrayMultiplex(): XrayMultiplex = multiplex.toXrayMultiplex()
 
     /** shadowsocks::ParseFromLink (shadowsocks.cpp): method and password are left to [validate]. */
     override fun parseFromLink(link: String): Boolean {
@@ -344,24 +321,6 @@ class Shadowsocks : Outbound("shadowsocks") {
         if (uot) obj["udp_over_tcp"] = uot
         val muxObj = multiplex.build(ctx)
         if (muxObj.isNotEmpty()) obj["multiplex"] = muxObj
-        return BuildResult(obj)
-    }
-
-    /** shadowsocks::BuildXray: the Xray `servers` shape; the stream is plain TCP. */
-    override fun buildXray(ctx: BuildContext): BuildResult {
-        val serverObj = JsonObject()
-        serverObj["address"] = server
-        serverObj["port"] = serverPort
-        serverObj["method"] = method
-        serverObj["password"] = password
-        if (uot) serverObj["uot"] = true
-        val obj = JsonObject()
-        obj["protocol"] = "shadowsocks"
-        obj["settings"] = JsonObject().also { it["servers"] = JsonArray.of(serverObj) }
-        val streamObj = XrayStreamSetting().build(ctx)
-        if (streamObj.isNotEmpty()) obj["streamSettings"] = streamObj
-        val muxObj = multiplex.toXrayMultiplex().buildMux(ctx, ctx.xrayMuxDefaultOn)
-        if (muxObj.isNotEmpty()) obj["mux"] = muxObj
         return BuildResult(obj)
     }
 

@@ -16,7 +16,6 @@ import io.nekohasekai.sagernet.outbound.import.ClashProxy
 import io.nekohasekai.sagernet.outbound.json.JsonInput
 import io.nekohasekai.sagernet.outbound.json.JsonObject
 import io.nekohasekai.sagernet.outbound.json.jsonObjectOf
-import io.nekohasekai.sagernet.outbound.link.Hosts
 import io.nekohasekai.sagernet.outbound.link.LinkBuilder
 import io.nekohasekai.sagernet.outbound.link.LinkParser
 import io.nekohasekai.sagernet.validation.Issue
@@ -274,13 +273,6 @@ class XrayVless : Outbound("xrayvless") {
         issues.addIssue(Severity.Error, "encryption", XrayVlessChecks.xrayXDriveEncryption(encryption, streamSetting.network))
         issues.addIssue(Severity.Error, "mux", XrayVlessChecks.xrayXDriveMux(multiplex.getMuxState(), streamSetting.network))
         multiplex.validate(issues)
-        // Xray v26.7+ refuses an unencrypted VLESS outbound to a public address when the config loads,
-        // which would stop the whole Xray core; such a profile belongs on sing-box VLESS instead.
-        if (!isVlessEncrypted(encryption) && streamSetting.security != "tls" && streamSetting.security != "reality" &&
-            !Hosts.isPrivateHost(server)
-        ) {
-            issues.addIssue(Severity.Error, "encryption", vtr(R.string.validation_xray_vless_unencrypted_public))
-        }
     }
 
     /** xrayVlessFlowProblem: shared by [validate] and the import's [dropUnusableFlow]. */

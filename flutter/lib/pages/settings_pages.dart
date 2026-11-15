@@ -689,7 +689,7 @@ class CorePage extends StatelessWidget {
     return BoxPage(title: 'Core', actions: [
       restoreDefaultsAction(context, const [
         'logLevel', 'xrayLogLevel', 'logBufSize', 'enableStats', 'disableTrafficStats', 'skipCert',
-        'useMozillaCerts', 'xrayUseSystemCa', 'clashApiEnabled', 'clashApiPort',
+        'useMozillaCerts', 'xrayUseSystemCa', 'xrayVlessPreference', 'clashApiEnabled', 'clashApiPort',
         'clashApiListenAddr', 'clashApiSecret', 'boxApiEnabled', 'boxApiPort', 'boxApiSecret',
         'enableNtp', 'ntpServerAddress', 'ntpServerPort', 'ntpInterval', 'ntpOutbound',
       ]),
@@ -720,6 +720,11 @@ class CorePage extends StatelessWidget {
           SettingText('Secret', 'boxApiSecret'),
         ],
       ]),
+      // Which transports' VLESS nodes are built for the Xray core instead of sing-box.
+      generateSection(title: context.tr('Xray'), items: [
+        SettingChoice<int>('Xray VLESS preference', 'xrayVlessPreference',
+          options: xrayVlessPreferences, text: xrayVlessPreferenceName),
+      ]),
       generateSection(title: context.tr('Security'), items: [
         SettingToggle('Skip certificate verification', 'skipCert'),
         SettingToggle('Use the Mozilla root store', 'useMozillaCerts'),
@@ -740,6 +745,13 @@ class CorePage extends StatelessWidget {
 
 const speedTestModes = [0, 1, 2, 3, 4];
 
+/// VLESS nodes are built for the Xray core only for the transports the preference names;
+/// the rest stay with sing-box. The order matches `xray_vless_preference_entries`.
+const xrayVlessPreferences = [0, 1, 2];
+
+String xrayVlessPreferenceName(int value) => switch (value) {
+  0 => 'XHTTP only', 1 => 'XHTTP and Reality', _ => 'All VLESS',
+};
 const exitLookupProviders = ['auto', 'ip-api', 'ipwho', 'ipinfo', 'ipapi-co', 'ip2location', 'freeipapi', 'cloudflare'];
 
 /// Three choices cannot be honoured by the probe set as it stands: ip-api's free

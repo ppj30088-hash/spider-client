@@ -177,13 +177,10 @@ object SettingsMapper {
         routeOwnsDns = dns != null,
     )
 
-    /**
-     * xray_vless_preference for link and subscription imports (utils.cpp:50-70). Retired: every
-     * VLESS import is an Xray profile now, so this always returns [AllVLESS] and the stored value
-     * is ignored. The setting entry stays in the schema so an older stored value never breaks a read.
-     */
+    /** xray_vless_preference for link and subscription imports (utils.cpp:50-70). */
     fun xrayVlessPreference(): OutboundFactory.XrayVlessPreference =
-        OutboundFactory.XrayVlessPreference.AllVLESS
+        OutboundFactory.XrayVlessPreference.entries.getOrNull(DataStore.xrayVlessPreference)
+            ?: OutboundFactory.DEFAULT_XRAY_VLESS_PREFERENCE
 
     private class DatabaseSelectorStore : SelectorStore {
         private val groups = HashMap<Long, SelectorGroup?>()

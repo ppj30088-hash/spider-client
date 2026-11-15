@@ -393,18 +393,6 @@ object XrayChecks {
         return vtr(R.string.validation_xray_fingerprint, fingerprint.trim())
     }
 
-    /**
-     * Whether Xray knows this fingerprint, without reporting it: the sing-box to Xray converter
-     * drops an unknown one instead of failing the profile, so it must not localise a message.
-     */
-    @JvmStatic
-    fun isXrayFingerprint(fingerprint: String, reality: Boolean): Boolean {
-        val t = fingerprint.trim().lowercase()
-        if (t.isEmpty()) return true
-        if (reality && t == "hellogolang") return false
-        return t in XRAY_STREAM_FINGERPRINTS
-    }
-
     /** A warning: Xray skips unknown names. */
     @JvmStatic
     fun xrayCipherSuites(text: String): String {

@@ -2,9 +2,6 @@ package io.nekohasekai.sagernet.outbound.import
 
 import io.nekohasekai.sagernet.outbound.Outbound
 import io.nekohasekai.sagernet.outbound.common.Transport
-import io.nekohasekai.sagernet.outbound.common.XrayStreamSetting
-import io.nekohasekai.sagernet.outbound.common.normalizeXrayNetwork
-import io.nekohasekai.sagernet.outbound.common.xrayRealityNetworks
 import io.nekohasekai.sagernet.outbound.json.JsonObject
 import io.nekohasekai.sagernet.outbound.types.Custom
 
@@ -38,27 +35,18 @@ internal object CoreSupport {
         "raw", "tcp", "xhttp", "splithttp", "kcp", "mkcp", "grpc", "ws", "websocket", "httpupgrade", "hysteria", "xdrive",
     )
 
-    /** StreamConfig.Build: REALITY only over RAW, XHTTP and gRPC ([xrayRealityNetworks]). */
-    private val XRAY_REALITY_NETWORKS = xrayRealityNetworks
+    /** StreamConfig.Build: REALITY only over RAW, XHTTP and gRPC. */
+    private val XRAY_REALITY_NETWORKS = setOf("raw", "tcp", "xhttp", "splithttp", "grpc")
 
     /**
      * Why the core [outbound] would run in cannot run it; null when it can. Only what [Outbound.validate] leaves
      * out: it already reports the Xray stream's network and security, the Shadowsocks plugin, the transport type and
-     * QUIC without TLS. An Xray profile's converted stream is checked the same way a verbatim Xray outbound is.
+     * QUIC without TLS.
      */
     fun problem(outbound: Outbound): String? = when {
         outbound is Custom -> customProblem(outbound)
-        outbound.isXray() && outbound.hasXrayStream() -> xrayStreamProblem(outbound.getXrayStream())
         outbound.hasTransport() && !outbound.isXray() -> transportProblem(outbound.getTransport(), outbound.getTls().enabled)
         else -> null
-    }
-
-    /** The stream of a typed Xray profile (VMess, Trojan, Shadowsocks, VLESS), read off the converted stream. */
-    private fun xrayStreamProblem(stream: XrayStreamSetting): String? {
-        // `method` overrides `network` in Xray's stream config; the typed stream never sets one.
-        val network = normalizeXrayNetwork(stream.network).lowercase().ifEmpty { "raw" }
-        if (network !in XRAY_NETWORKS) return "Xray has no \"$network\" transport"
-        return xraySecurityProblem(stream.security, network)
     }
 
     /**

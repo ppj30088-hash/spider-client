@@ -39,9 +39,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     var selectedProxy by configurationStore.long(Key.PROFILE_ID)
 
-    /** The profile id of the Aether helper (a SOCKS5 profile at 127.0.0.1:1819), 0 when none was created yet. */
-    var aetherProfileId by configurationStore.long(Key.AETHER_PROFILE_ID)
-
     // only in bg process
     var vpnService: VpnService? = null
     var baseService: BaseService.Interface? = null

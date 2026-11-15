@@ -1,0 +1,146 @@
+# ADR 0002 — 全量对齐 Bettbox（取代 ADR 0001）
+
+- 日期：2026-11-11
+- 状态：已接受
+- 取代：`0001-ffi-boundary.md`（保守路线），其决策 1、4、5 与「明确不做」中的三条被本 ADR 推翻
+- 影响范围：内核补丁、Dart 运行时、Kotlin 桥接、存储层、CI 门禁、发布链
+
+## 背景
+
+0001 记录了当时的四条链路：控制面走 dart:ffi 长驻 isolate、数据面走 MethodChannel
+（Kotlin 持有 Room / `ProfileManager` / 配置生成 / 订阅解析 / 测速会话）、日志与状态走 Go
+message port、前台服务走 MethodChannel。它据此定下「Kotlin 是数据面唯一所有者」「不推翻
+typed ABI」「不做 Bettbox 式 JSON action」「不上 Riverpod」。
+
+用户要求把整个项目（含内核架构）与 Bettbox 对齐。对比结论见
+`flutter/lib/core/throne_kernel.dart`、`kernel_worker.dart`、`buildScript/core-patch/core/mobile/dartbridge.go`：
+**传输层其实已经是 Bettbox 同款** —— `Dart_PostCObject_DL` 消息 port、长驻 isolate 独占
+Instance handle、`NativeApi.initializeApiDLData`、`{"method","data"}` JSON 事件、状态快照聚合。
+缺的是 Bettbox 的**协议层**：单一 `invokeAction` C 入口、`Action{id,method,data}` /
+`ActionResult{id,data,code}`、`id → Completer` 关联、泛型 `invoke<T>`。
+
+数据面要真正迁到 Go/Dart，还有一个 0001 未展开的硬前提：本项目约 120 个
+`ThroneBoxBridge.kt` handler 建在 Room v20（7 个 `@Entity`）与 `DataStore` 上，这些 API 在
+Go 进程里不可达。Bettbox 用 `lib/common/path.dart` 的文件/JSON 存储，因此能把数据面放在
+Go/Dart。对齐架构就必须同时换掉存储层，这正是 0001 估算的 56k 行 Kotlin 重写的实质。
+
+## 决策
+
+1. **取代 0001**。保留原文作为历史，头部标注「已被 0002 取代」。
+2. **统一协议层**：新增单一 `throne_invoke_action` C 导出，内核侧以
+   `map[Method]handler` 分发 JSON `Action`，响应 `ActionResult` 回显 `id`；Dart 侧以
+   `Map<String, Completer>` 关联，`Future<T> invoke<T>(...)` 为唯一入口。
+3. **保留 424 个 typed 导出作为 handler 的实现**，不删生成物、不动 `tools/bindgen` 的
+   三方等式。对齐的是「一个通用入口」，不是「删掉所有 typed 调用」。
+4. **存储改为应用私有目录下的文件/JSON**（`profiles.json` / `routes.json` /
+   `settings.json` / `groups.json`），原子写、版本化。冷启时从 Room v20 做一次性迁移，
+   保留 id 映射；迁移成功后才切换读取源，Room 保留只读回退。
+5. **数据面分批迁到 action handler**；Kotlin 最终只保留 Android 平台能力：VpnService 与
+   TUN fd、通知、`state.stats`、`wifi.watch`、`apps.*`、SAF 备份、`data.path`、
+   `ffi.mode`/`ffi.handle` 交接。
+6. **进度事件改推送**：测速等长任务由 Go `notify` 经 message port 推状态，替掉 Dart 的
+   250 ms 轮询；Action RPC 只返回最终结果。
+7. **门禁不得拆**：`symbol_audit.py` 的三方符号等式、`channel_audit.py` 的双向通道对齐
+   继续强制；新增 `action_contract.py` 校验 Go `Method` ↔ Dart `ActionMethod` ↔ 注册表。
+   不通过放宽门禁来「修红」。
+8. **状态管理与双 Flutter engine 留到二期**：一期不动 `BoxController extends ChangeNotifier` /
+   `BoxScope` / `BoxAspect` / `BoxEventBus`（牵动约 35 个 widget 测试与 vendored `lib/ui`）；
+   单 engine + 长驻 isolate 与 Bettbox 的双 engine 功能等价，二期再评估。
+
+## 分期与验收线
+
+| 期 | 内容 | 验收 |
+| --- | --- | --- |
+| 0 | 本 ADR、文档、`action_contract.py` 入 CI | 门禁链全绿，无运行时改动 |
+| 1 | `throne_invoke_action` + 两份头文件 + Dart `invoke`/Completer | 本地重编 AAR 后符号可见；`symbol_audit.py` 三方相等；单元测试覆盖 id 关联、超时、错误码 |
+| 2 | `document_store.dart` + Room→JSON 迁移 + `schema_audit.py` 调整 | 迁移测试用真实 v20 样例；老用户 profile/订阅/路由规则零丢失；Room 只读回退可用 |
+| 3 | `routes.*` → `profiles.*` → `settings.*` → `config.build` → `speedTest.*` 迁到总线，Kotlin case 同步删除 | 每个域一个 PR；`channel_audit.py` 双向对齐；模拟器回归连接、测速、通知 |
+| 4（二期） | Riverpod、双 Flutter engine、剩余平台面 | 另开计划 |
+
+> **修订（settings.\* 回到 channel）**：phase 3 里 `settings.*` 的 Go 侧从未接线 ——
+> `settings_store.go` 的 `globalRowStoreInstance` 没有实现、`SetGlobalRowStore` 零调用点，
+> 四个 handler 在 FFI driver attach 后必然返回 `errNoRowStore`；`preferencesSet` 也写到了
+> 与 Kotlin 读取路径不同的文档。由于 Room 才是 `ThroneSettings` 的权威存储、preferences 存于
+> SharedPreferences，`SettingsApi` 已改回 channel-only，五个 action 与 Go 运行时代码删除。
+> `settings_schema.go` / `settings_codec.go` 保留为纯契约（由 `settings_contract.py` 校验），
+> 待有真实 row store 实现时再迁。判定标准：**一个域只有在存储权威也在 Go 时才算迁完**，
+> 仅注册 handler 不算。
+>
+> **修订（profiles.\* / groups 改为直写 Room，决策 4 例外）**：决策 4 假定存储全部改成
+> 文件/JSON，但 `GroupRepo` 与 `ProfileManager` 是 Room 实现，配置生成、订阅刷新、备份
+> 导出都直接读 Room。phase 3d 让 Go 写 `profiles.json` / `groups.json` 之后，八个
+> `profiles.*` handler 的回答与 Kotlin 的读写互不可见 —— 改名或拖拽排序在下一次读取时
+> 变回旧值。把 JSON 文档挂成只读视图也修不了：只要 Kotlin 还在写 Room，跨写的读者立刻
+> 拿到陈旧数据。因此这两张表的权威留在 Room，由 kernel **直接打开
+> `databases/sager_net.db` 写入**：cgo 编入 SQLite amalgamation（无运行时共享库依赖），
+> WAL 下与 Room 的连接共存，`data.refresh` 补上 Room 观察不到的外部写入。路由三表
+> （`route_profiles` / `route_rules` / `global_route_rules`）仍是文件/JSON 权威 ——
+> 那条路径没有第二个写者。判定标准的第二次应用：**权威在哪，写者就在哪**；不能既让
+> Room 当权威又让 Go 写别处。
+
+### 迁移边界：`profiles.*` 与 `groups.*` 的剩余部分不再迁
+
+两个域各被调查过一轮，结论是剩下的动作都**不应该**搬过去。这不是「还没做」，是
+「不该做」——写下来是为了下一个人不必重复调研，也不必把「还有几十个 channel 动作」
+当成技术债。
+
+**`profiles.*`：31 个 channel 动作，8 个已有 Go handler 作 fallback，23 个只有 Kotlin。**
+
+| 阻塞物 | 动作 |
+| --- | --- |
+| `parseOutbounds` / `OutboundFactory` / `validate` | `save`、`nodeCreate`、`nodeUpdate`、`delete`、`importFile`、`scan` |
+| `ProfileJson`（出站模型 ↔ JSON） | `nodeConfig`、`config`、`read`、`write` |
+| 反射 `Mux`/`Tls` 字段 + `saveMuxState` | `nodeTuningSave` |
+| `exportLink` / 分享链接生成 | `nodeInfo`、`nodeLink` |
+| `AutoSelectorRuntime`（运行中的选择器） | `autoSelectorInfo`、`Pin`、`Recheck`、`Status` |
+| 控制面：选中节点、服务重载、订阅队列 | `list`、`select`、`switchRelative`、`update` |
+
+已迁完的 9 个是 `stats`、`nodeInfo`、`nodeConfig`、`nodeTuningInfo`、`reorder`、
+`nodeDelete`、`clearTestResults`、`clearTraffic`、`autoSelectorSave`；其余 22 个动作
+都落在上表。
+
+搬任何一个，都要把**整个出站协议模型**搬进 Go。那样出站协议就有两份实现，
+而它们必然漂移 —— 这正是本 ADR 存在的理由（决策 3：保留 424 个 typed 导出而不重写）。
+`autoSelectorSave` 是唯一例外，因为它只改一个扁平 JSON 的标量键，不碰模型
+（phase 3d PR-5）。
+
+**`groups.*`：10 个动作，全部是控制面或 UI 快照。**
+
+| 性质 | 动作 |
+| --- | --- |
+| 向运行中的 sing-box 发 RPC（切换节点、测速） | `select`、`test` |
+| 跨进程会话 + 进度回推 | 6 个 `testSession.*` |
+| payload 形状开关（切换时重置缓存基线） | `visible` |
+| 读 `BboxBridge.state` 内存快照 | `nodes` |
+| 五类权威混合（Room + DataStore + Android 资源 + `RouteManager` + `RequestIdentity`） | `groupSettings.get/set` |
+
+决策 5 已写明 Kotlin 最终保留「VpnService 与 TUN fd、通知、`state.stats`、`wifi.watch`、
+`apps.*`、SAF 备份、`data.path`、`ffi.mode`/`ffi.handle` 交接」—— 控制面与 UI 快照
+属于这个保留集，不是待迁移项。
+
+**判据的统一表述**（三次应用的归纳）：
+
+1. `settings.*`（回到 channel）：权威不在 Go → 不迁。
+2. `profiles.*` / `groups`（直写 Room）：权威在 Room，于是给 Go 开同一条数据库 → 迁。
+3. `profiles.*` 剩余 / `groups.*`（本节）：迁移要求把**第二个实现**带进来（出站模型、
+   控制面、UI 快照）→ 不迁，即使权威可达。
+
+第 3 条是本节的增量：**「能读到数据」不等于「该由 Go 处理」**。判断一个动作该归谁，
+看的是它需要的**能力**属于哪一层，而不是它的数据在哪。
+
+## 后果
+
+**正面**：与 Bettbox 的协议、存储、事件模型一致；新增能力只需在 Go 注册表加一个 handler；
+数据面不再受 Android Room 绑定；长任务进度由内核推送。
+
+**负面**：这是迄今最大的一次改动。阶段 2 的迁移一旦漏字段会不可逆地丢用户数据；
+`action_contract.py` 与既有 `symbol_audit.py` / `channel_audit.py` 形成三重契约，新增或删除
+任一方法都需三处同步；每期都必须跑完整本地重编（`buildScript/local-env.sh` 已固化）。
+
+## 明确不做（继承 0001 的护栏）
+
+- 内嵌 mihomo 全树。
+- 拆 CI 门禁来修红。
+- 复制 Bettbox 自身的协议漂移：实测其 Go 侧 `resetConnectionsMethod` 与 Dart 侧
+  `resetConnections` 字符串不一致、方法数 72 vs 74。本项目的三方枚举由脚本强校验。
+- 一期改状态管理框架（见决策 8）。

@@ -774,13 +774,9 @@ object ProfileImport {
         /** clashUsesXrayVless (SubscriptionParser.cpp): sing-box VLESS rejects the vision-udp443 flow; Xray accepts it. */
         private fun clashUsesXrayVless(proxy: ClashProxy): Boolean {
             if (proxy.type != "vless") return false
-            // Xray v26.7+ refuses an unencrypted VLESS outbound to a public address when the config loads,
-            // which would stop the whole Xray core; such entries stay on sing-box, which carries them fine.
-            // (`tls` covers REALITY here: a Clash REALITY entry sets tls with a reality-opts public key.)
-            val encryption = proxy.string("encryption")
-            if (!proxy.bool("tls") && (encryption.isEmpty() || encryption == "none")) return false
             val flow = proxy.string("flow").trim().lowercase()
             val singBoxFlow = flow.isEmpty() || flow == "none" || flow == "xtls-rprx-vision"
+            val encryption = proxy.string("encryption")
             return proxy.string("network") == "xhttp" || (encryption.isNotEmpty() && encryption != "none") || !singBoxFlow ||
                 clashRealityOnXray(proxy)
         }

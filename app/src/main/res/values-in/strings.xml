@@ -2098,7 +2098,6 @@
     <string name="validation_xray_session_ascii">Tabel hanya boleh berisi karakter ASCII.</string>
     <string name="validation_xray_xmux_exclusive">Setel Max Connections atau Max Concurrency, jangan keduanya.</string>
     <string name="validation_xray_vless_encryption_none">Tulis none bila server tidak menggunakan enkripsi VLESS.</string>
-    <string name="validation_xray_vless_unencrypted_public">VLESS tanpa TLS, REALITY, atau enkripsi tidak dapat berjalan di Xray ke alamat publik. Gunakan VLESS sing-box sebagai gantinya.</string>
     <string name="validation_xray_vless_encryption_format">Harus none, atau string mlkem768x25519plus yang diberikan server.</string>
     <string name="validation_xray_vless_encryption_mode">Bagian setelah mlkem768x25519plus harus native, xorpub atau random.</string>
     <string name="validation_xray_vless_encryption_rtt">Bagian setelah mode harus 1rtt atau 0rtt.</string>

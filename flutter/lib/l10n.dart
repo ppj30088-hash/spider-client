@@ -46,8 +46,8 @@ const _zh = <String, String>{
   "Matching domains are excluded from capture.": "不抓取匹配的域名。",
   "Keeps up to 300 requests and 32 MiB. Large bodies keep a prefix. HTTPS ports use the HTTP authority when socket metadata is unavailable.":
       "最多保留 300 条请求、32 MiB 数据。超长正文只保存开头。无法获取套接字信息时，HTTPS 端口按 HTTP 请求目标判断。",
-  "An empty selection captures applications in this Android user. Spider Client itself is excluded from eBPF capture. Applications sharing a UID share the same filter.":
-      "未选择时抓取当前 Android 用户的应用。eBPF 不抓取 Spider Client 自身；共享 UID 的应用使用相同筛选。",
+  "An empty selection captures applications in this Android user. spider client itself is excluded from eBPF capture. Applications sharing a UID share the same filter.":
+      "未选择时抓取当前 Android 用户的应用。eBPF 不抓取 spider client 自身；共享 UID 的应用使用相同筛选。",
   "Connections skipped or interrupted": "跳过或中断的连接",
   "TLS libraries attached": "个 TLS 库已挂载探针",
   "Capture source": "采集来源",
@@ -351,8 +351,6 @@ const _zh = <String, String>{
   'Connectivity': '连通性',
   'Checking connection': '正在检查连接',
   'Connected': '已连接',
-  'Finding a route…': '正在寻找路线…',
-  'Finds a route by itself — no config needed.': '自动寻找路线，无需任何设置。',
   'Connection failed': '连接失败',
   'WebDAV configuration': 'WebDAV 配置', 'Account': '账户',
   'Invalid backup file name': '无效的备份文件名', 'Optional': '可选',
@@ -378,6 +376,7 @@ const _zh = <String, String>{
   'FlClash interface': 'FlClash 界面',
   'Version': '版本',
   'Network diagnostics': '网络诊断',
+  'Thanks for the migration approach': '感谢迁移思路',
   'Network quality': '网络质量', 'STUN test': 'STUN 测试',
   'Domain resolution': '域名解析',
   'The camera opens in the scanning screen. Point it at a configuration QR code.':
@@ -706,6 +705,10 @@ const _zh = <String, String>{
   'Security': '安全',
   'Xray': 'Xray',
   'API dashboard': 'API 仪表盘',
+  'Xray VLESS preference': 'Xray VLESS 偏好',
+  'XHTTP only': '仅 XHTTP',
+  'XHTTP and Reality': 'XHTTP 与 Reality',
+  'All VLESS': '全部 VLESS',
   'Show the country code': '显示国家代码', 'Show the country icon': '显示国家图标',
   'Speed test timeout': '测速超时',
   'Exit detection': '出口检测',

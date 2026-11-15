@@ -8,6 +8,7 @@ runs:
     - name: Fetch routeprofiles snapshot
       shell: bash
       run: |
+        exec > >(tee -a "$GITHUB_WORKSPACE/build.log") 2>&1
         set -euo pipefail
         DEST=app/src/main/assets/routeprofiles
         rm -rf "$DEST"

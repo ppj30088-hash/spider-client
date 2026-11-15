@@ -12,11 +12,6 @@ import io.nekohasekai.sagernet.outbound.vPacketEncoding
 import io.nekohasekai.sagernet.outbound.common.Multiplex
 import io.nekohasekai.sagernet.outbound.common.Tls
 import io.nekohasekai.sagernet.outbound.common.Transport
-import io.nekohasekai.sagernet.outbound.common.XrayMultiplex
-import io.nekohasekai.sagernet.outbound.common.XrayStreamSetting
-import io.nekohasekai.sagernet.outbound.common.supportsXrayStream
-import io.nekohasekai.sagernet.outbound.common.toXrayMultiplex
-import io.nekohasekai.sagernet.outbound.common.toXrayStream
 import io.nekohasekai.sagernet.outbound.common.importTlsCipherSuites
 import io.nekohasekai.sagernet.outbound.common.importTlsFingerprint
 import io.nekohasekai.sagernet.outbound.common.singBoxTransportType
@@ -77,25 +72,6 @@ class Vmess : Outbound("vmess") {
     override fun getTls(): Tls = tls
     override fun getMux(): Multiplex = multiplex
     override fun getTransport(): Transport = transport
-
-    /**
-     * VMess runs on Xray except where Xray v26 cannot carry the profile: a body security Xray
-     * no longer knows (`none`, `zero` and `aes-128-cfb` all become `auto` there, which speaks a
-     * different header than the server expects), a legacy `alterId`, the `authenticated_length`
-     * experiment, or a TLS block and transport Xray cannot run at all ([supportsXrayStream]).
-     * Those profiles stay on sing-box, which carries them as before.
-     */
-    override fun isXray(): Boolean {
-        if (!tls.supportsXrayStream(transport)) return false
-        if (security == "none" || security == "zero" || security == "aes-128-cfb") return false
-        if (alter_id != 0) return false
-        if (authenticated_length) return false
-        return true
-    }
-
-    override fun hasXrayStream(): Boolean = isXray()
-    override fun getXrayStream(): XrayStreamSetting = tls.toXrayStream(transport)
-    override fun getXrayMultiplex(): XrayMultiplex = multiplex.toXrayMultiplex()
 
     /**
      * vmess::ParseFromLink (vmess.cpp): the V2RayN base64 JSON form first (some generators append #name or use the
@@ -297,23 +273,6 @@ class Vmess : Outbound("vmess") {
         if (transportObj.isNotEmpty()) obj["transport"] = transportObj
         val muxObj = multiplex.build(ctx)
         if (muxObj.isNotEmpty()) obj["multiplex"] = muxObj
-        return BuildResult(obj)
-    }
-
-    /** vmess::BuildXray: the simplified Xray shape (`address`, `port`, `id`, `security`); Xray has no fields for `alterId`, the padding flags or the packet encoding. */
-    override fun buildXray(ctx: BuildContext): BuildResult {
-        val obj = JsonObject()
-        obj["protocol"] = "vmess"
-        val settings = JsonObject()
-        settings["address"] = server
-        settings["port"] = serverPort
-        settings["id"] = uuid
-        settings["security"] = security.ifEmpty { "auto" }
-        obj["settings"] = settings
-        val streamObj = tls.toXrayStream(transport).build(ctx)
-        if (streamObj.isNotEmpty()) obj["streamSettings"] = streamObj
-        val muxObj = multiplex.toXrayMultiplex().buildMux(ctx, ctx.xrayMuxDefaultOn)
-        if (muxObj.isNotEmpty()) obj["mux"] = muxObj
         return BuildResult(obj)
     }
 

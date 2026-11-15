@@ -2109,7 +2109,6 @@
     <string name="validation_xray_network">Throne از انتقال Xray به نام \"%1$s\" پشتیبانی نمی‌کند. از raw، xhttp، ws، httpupgrade، grpc یا xdrive استفاده کنید.</string>
     <string name="validation_xray_security">Xray از امنیت \"%1$s\" پشتیبانی نمی‌کند. از none، tls یا reality استفاده کنید.</string>
     <string name="validation_xray_reality_network">REALITY فقط با انتقال raw، xhttp یا grpc کار می‌کند.</string>
-    <string name="validation_xray_vless_unencrypted_public">VLESS بدون TLS، REALITY یا رمزنگاری نمی‌تواند روی Xray به یک آدرس عمومی وصل شود؛ از VLESS با sing-box استفاده کنید.</string>
     <string name="validation_xray_reality_hellogolang">REALITY نمی‌تواند از اثر انگشت hellogolang استفاده کند؛ اثر انگشت دیگری انتخاب کنید.</string>
     <string name="validation_xray_fingerprint">Xray اثر انگشت \"%1$s\" را نمی‌شناسد. از chrome، firefox، safari، ios، android، edge، 360، qq، random، randomized یا unsafe استفاده کنید.</string>
     <string name="validation_xray_cipher_unknown">Xray مجموعه رمزنگاری ناشناخته \"%1$s\" را نادیده می‌گیرد.</string>

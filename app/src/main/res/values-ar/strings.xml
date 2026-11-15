@@ -2241,7 +2241,6 @@
     <string name="validation_xray_session_ascii">يجب أن يحتوي الجدول على أحرف ASCII فقط.</string>
     <string name="validation_xray_xmux_exclusive">اضبط إما «أقصى اتصالات» أو «أقصى تزامن»، وليس كليهما.</string>
     <string name="validation_xray_vless_encryption_none">اكتب none عندما لا يستخدم الخادم تشفير VLESS.</string>
-    <string name="validation_xray_vless_unencrypted_public">لا يمكن تشغيل VLESS بدون TLS أو REALITY أو تشفير على Xray إلى عنوان عام. استخدم VLESS مع sing-box بدلاً من ذلك.</string>
     <string name="validation_xray_vless_encryption_format">يجب أن يكون none، أو سلسلة mlkem768x25519plus التي يعطيها الخادم.</string>
     <string name="validation_xray_vless_encryption_mode">يجب أن يكون الجزء بعد mlkem768x25519plus هو native أو xorpub أو random.</string>
     <string name="validation_xray_vless_encryption_rtt">يجب أن يكون الجزء بعد الوضع هو 1rtt أو 0rtt.</string>

@@ -31,7 +31,7 @@ object OutboundFactory {
     enum class XrayVlessPreference { XhttpOnly, XhttpAndReality, AllVLESS }
 
     @JvmField
-    val DEFAULT_XRAY_VLESS_PREFERENCE: XrayVlessPreference = XrayVlessPreference.AllVLESS
+    val DEFAULT_XRAY_VLESS_PREFERENCE: XrayVlessPreference = XrayVlessPreference.XhttpAndReality
 
     /** Every factory string of OutboundFactory.cpp:35-61 (R2 §A). */
     @JvmField
@@ -175,11 +175,6 @@ object OutboundFactory {
         val transport = normalizeXrayNetwork(query.value("type"))
         val encryption = query.value("encryption")
         val security = query.value("security").trim().lowercase()
-        // Xray v26.7+ refuses an unencrypted VLESS outbound to a public address when the config loads,
-        // which would stop the whole Xray core; such links stay on sing-box, which carries them fine.
-        // `security` here is the Xray stream's reading of the link: only an explicit tls/reality
-        // turns its TLS on, a bare sni does not.
-        if (security != "tls" && security != "reality" && (encryption.isEmpty() || encryption == "none")) return false
         val xrayOnly = query.has("fm") ||
             query.has("finalmask") ||
             // sing-box has no counterpart to verifyPeerCertByName

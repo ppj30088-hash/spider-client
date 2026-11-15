@@ -2088,7 +2088,6 @@
     <string name="validation_xray_session_ascii">字符表只能包含 ASCII 字符。</string>
     <string name="validation_xray_xmux_exclusive">请只设置「最大连接数」或「最大并发数」之一，不要同时设置。</string>
     <string name="validation_xray_vless_encryption_none">服务器不使用 VLESS 加密时请写 none。</string>
-    <string name="validation_xray_vless_unencrypted_public">没有 TLS、REALITY 或加密的 VLESS 无法在 Xray 上连接到公开地址。请改用 sing-box VLESS。</string>
     <string name="validation_xray_vless_encryption_format">必须是 none，或服务器提供的 mlkem768x25519plus 字符串。</string>
     <string name="validation_xray_vless_encryption_mode">mlkem768x25519plus 之后的部分必须是 native、xorpub 或 random。</string>
     <string name="validation_xray_vless_encryption_rtt">模式之后的部分必须是 1rtt 或 0rtt。</string>

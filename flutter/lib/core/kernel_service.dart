@@ -499,10 +499,6 @@ class KernelService {
       // normalizes it. Use a checked conversion so a future codec change fails
       // with a readable message instead of a bare type-cast exception.
       final built = asStringKeyedMap(await build, context: 'config.build');
-      // An Aether start brings its helper binary up first: the core's SOCKS
-      // outbound only answers while the helper process runs. A no-op when the
-      // selected profile is not Aether; a failure aborts the start below.
-      await box.call('aether.start');
       final readyMs = clock.elapsedMilliseconds;
       final handle = await worker.createInstance(built);
       _instanceHandle = handle;
@@ -543,9 +539,6 @@ class KernelService {
       // Release the instance that may have been partially started so the next
       // createInstance does not silently orphan it inside the worker isolate.
       try { await worker.stop(); } catch (_) { /* Already stopped or never started. */ }
-      // The helper may have come up before the core failed: take it down too,
-      // so a failed start leaves nothing running behind it.
-      try { await box.call('aether.stop'); } catch (_) { /* Already stopped or never started. */ }
       _instanceHandle = null;
       await _publishHandle(null);
       // A failed start leaves nothing running, and a reload that kept the old facts
@@ -600,11 +593,6 @@ class KernelService {
     try {
       await worker.setHeartbeat(false);
       await worker.stop();
-      // A reload keeps the helper: the start that follows reuses it instead of
-      // forcing a fresh route scan. A real stop takes it down with the core.
-      if (clearRunning) {
-        try { await box.call('aether.stop'); } catch (error) { note('aether stop: $error'); }
-      }
     } catch (error) {
       report(error);
     } finally {

@@ -39,9 +39,11 @@ void main() {
         final image = decoration is ShapeDecoration ? decoration.image?.image : null;
         return image is AssetImage && image.assetName == 'assets/images/app_icon.webp';
       }), findsOneWidget);
-      // The Spider Client rebrand removed the upstream B-box migration credit
-      // from the About page, so there is no credit text to assert here; the
-      // update flow below still asserts on every url.open call this test makes.
+      // The About page carries the B-box migration credit in-app (shown only, not tapped:
+      // the update flow below asserts on every url.open call this test makes).
+      await tester.ensureVisible(find.text('giturass/B-box'));
+      expect(find.text('giturass/B-box'), findsOneWidget);
+      expect(find.text('Thanks for the migration approach'), findsOneWidget);
       final check = find.widgetWithText(TonalButton, 'Check for updates');
       await tester.ensureVisible(check);
       await tester.tap(check);

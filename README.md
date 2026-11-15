@@ -1,57 +1,135 @@
-# Spider Client
+# Flrone
 
-<div dir="rtl">
+[![CI](https://github.com/yuedaochangmendian/throne-flclash-ui/actions/workflows/ci.yml/badge.svg)](https://github.com/yuedaochangmendian/throne-flclash-ui/actions/workflows/ci.yml) [![Latest release](https://img.shields.io/github/v/release/yuedaochangmendian/throne-flclash-ui)](https://github.com/yuedaochangmendian/throne-flclash-ui/releases) [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
-## اسپایدر کلاینت چیست؟
+Other languages: [简体中文](readme/README_zh.md) · [English (short)](readme/README_en.md)
 
-اسپایدر کلاینت یک برنامه اندروید برای اتصال به اینترنت آزاد است.
+An Android GUI proxy utility on the [sing-box](https://github.com/SagerNet/sing-box) core: Throne's engine with a
+fully rebuilt Flutter interface on the prism UI layer FlClash's dev branch uses. Supports Android 7.0 (API 24) and newer, including
+Android TV.
 
-### امکانات
+## What this repository is
 
-- **هسته v2ray:** اتصال با پروتکل‌های VLESS ،VMess ،Trojan و Shadowsocks
-- **Aether:** بدون هیچ تنظیماتی، خودش راه را پیدا می‌کند و وصل می‌شود. فقط دکمه اتصال را بزنید
-- **اضافه کردن کانفیگ تکی:** یک لینک کانفیگ را وارد کنید و وصل شوید؛ اشتراک هم پشتیبانی می‌شود
-- **اندروید ۷ به بالا**
+A downstream distribution of [throneproj/ThroneForAndroid](https://github.com/throneproj/ThroneForAndroid): the
+core (sing-box + Xray, protocol and configuration surface) is pinned per release to Throne's own (`THRONE_CORE_REF`
+in `nb4a.properties`) and built by CI, while everything above it — the interface, the bridge layer, the release
+line — is owned here.
 
-### نصب
+- **One interface**: the Flutter UI is the app's only screen as of 3.0.0; the legacy Fragment interface retired
+  entirely (the VPN notification, share/open intents and the quick settings tile all land in it).
+- **Engine follows upstream**: core upgrades ride upstream releases; this repository does not carry core patches.
+- Upstream's own releases, docs ([throneproj.github.io](https://throneproj.github.io)) and donation options live in
+  the [upstream repository](https://github.com/throneproj/ThroneForAndroid).
 
-فایل APK را از بخش [Releases](https://github.com/ppj30088-hash/spider-client/releases) بگیرید و نصب کنید.
+### Install and update
 
-### ساخت
+- Releases ship three ABI splits (arm64-v8a, armeabi-v7a, x86_64) with SHA256SUMS from
+  [GitHub Releases](https://github.com/yuedaochangmendian/throne-flclash-ui/releases); the in-app update check
+  verifies size and SHA-256 before offering the installer.
+- Releases from v2.0.0 on are signed with a key that Android refuses to install over a 1.x release (signature
+  conflict): uninstall the old release first and import subscriptions again.
+- **Preview builds (`-pre.N`) are one-way.** Their `versionCode` is always below the stable release of the same
+  version (`X.Y.Z` stable is `*999`, previews are `*001..*998`), so Android refuses to install a preview over the
+  stable release it belongs to (`INSTALL_FAILED_VERSION_DOWNGRADE`). Installing a preview over an older release or
+  an older preview works; going back from stable to preview requires uninstalling first. The in-app updater only
+  offers stable releases and never suggests a downgrade.
 
-```sh
-./gradlew app:assembleOssDebug
-```
+## Features
 
-### لایسنس
+- Groups and subscriptions that work like Throne desktop: per-group subscription options (filters, clean-up, URL test after an update), front / landing proxy, HWID headers, scheduled updates with change reports
+- Backups in the desktop's `.thrbackup` format, restorable on either side: save, share or sync over WebDAV
+- Route profiles shared with desktop, preloaded from [routeprofiles](https://github.com/throneproj/routeprofiles), plus Android-only rule conditions: apps, Wi-Fi network (SSID / BSSID), network type and metered networks
+- Auto Selector profiles that keep the best server of one or more groups ranked and switch automatically
+- Cloudflare WARP: registration (WireGuard or MASQUE identity) and a built-in WARP mode for routing
+- URL, IP / country and speed tests, with a bulk-test panel (live progress, latency histogram, fastest servers, sort / remove unavailable / connect to fastest)
+- The sing-box dashboard built in (live traffic, connections, logs)
+- The home status card shows the exit's region as a regional-indicator emoji badge, with its location and carrier beside the address and run time / location / operator along the bottom; tapping the badge re-checks the exit IP, and with the service stopped it reports the address the phone itself uses
+- The Log screen is FlClash's own log view: one export action, an empty state, a scrollbar that names the record at the thumb, and a list that stops following the newest line once you scroll away; each record is split into what it says and where it came from, and tapping the level chip filters by it
+- JSON editor with sing-box-aware formatting
+- Home-screen widgets, a quick settings tile, and server switching from the notification
+- Android TV: launcher banner, D-pad navigation, previous / next server
 
-GPL-3.0 — فایل [LICENSE](LICENSE) را ببینید.
+## Supported protocols
 
-</div>
+- SOCKS
+- HTTP(S)
+- Shadowsocks
+- Trojan
+- VMess
+- VLESS
+- TUIC
+- Hysteria
+- Hysteria2
+- AnyTLS
+- Mieru
+- Snell
+- NaïveProxy
+- Juicity
+- TrustTunnel
+- ShadowTLS
+- Wireguard
+- AmneziaWG
+- MASQUE
+- SSH
+- Xray VLESS
+- OpenVPN/OpenConnect
+- Custom Outbound (Both Sing-box and Xray)
+- Custom Config (Both Sing-box and Xray)
+- Chaining outbounds
 
----
+## Subscription Formats
 
-## What is Spider Client?
+Various formats are supported, including share links, various JSON representation of Sing-box configs, and v2rayN link format as well as limited support for Shadowsocks and Clash formats. Only the outbounds (servers) of a subscription are imported; its routing rules are ignored.
 
-Spider Client is an Android app for connecting to the free internet.
+Deeplinks are also supported, read the [documentation](https://throneproj.github.io/advanced/deeplinks/) for more information.
 
-### Features
+## Development
 
-- **v2ray core:** connect with VLESS, VMess, Trojan and Shadowsocks
-- **Aether:** no settings needed — it finds a route by itself and connects. Just tap connect
-- **Add a single config:** paste one config link and connect; subscriptions are supported too
-- **Android 7.0 and newer**
+- **CI** (`ci.yml`, every push): Kotlin unit tests + debug build (with the ThroneCore AAR built from the pinned
+  upstream ref), the Flutter module's `analyze --fatal-infos` + widget tests, a
+  [channel contract audit](tools/diagnostics/channel_audit.py) that fails when a bridge method or event loses an
+  end, and a scan proving the freshly built Flutter AAR only calls APIs the pinned kotlin-stdlib/coroutines
+  provide.
+- **Releases** (`release.yml`): a successful `main` CI run automatically publishes the next `-pre.N` prerelease; stable releases remain manual/tag-driven. Tag = `VERSION_NAME` from `nb4a.properties`, notes from the matching
+  `CHANGELOG.md` section.
+- **Specs**: `openspec/specs/` holds the governing specifications; changes go through `openspec/changes/`.
+- **Design documents**: [docs/bbox-bridge.md](docs/bbox-bridge.md) (the bridge layer),
+  [docs/bbox-flutter.md](docs/bbox-flutter.md) (the Flutter module), [docs/device-checklist.md](docs/device-checklist.md)
+  (the pre-release device gate), [docs/prism-upstream.md](docs/prism-upstream.md) (the vendored Prism UI
+  baseline and drift policy), [docs/roadmap.md](docs/roadmap.md) (where the project is heading).
+- `Capabilities.kt` is the single source of truth for which B-box-only features exist; the bridge documents
+  every method and event it serves.
+- **Contributing**: see [CONTRIBUTING.md](CONTRIBUTING.md) for the development environment, local verification
+  commands and the branch / pull-request workflow.
 
-### Install
+## Community / Feedback
 
-Get the APK from [Releases](https://github.com/ppj30088-hash/spider-client/releases) and install it.
+Please use [GitHub Issues](https://github.com/yuedaochangmendian/throne-flclash-ui/issues) to report bugs, request
+features or ask questions; the issue templates there ask for exported logs and reproduction steps. For vulnerabilities
+that must not be disclosed in public, follow [SECURITY.md](SECURITY.md) instead.
 
-### Build
+## Credits
 
-```sh
-./gradlew app:assembleOssDebug
-```
+- [throneproj/sing-box](https://github.com/throneproj/sing-box), a fork of [SagerNet/sing-box](https://github.com/SagerNet/sing-box)
+- [throneproj/Xray-core](https://github.com/throneproj/Xray-core), a fork of [XTLS/Xray-core](https://github.com/XTLS/Xray-core)
+- [throneproj/ThroneForAndroid](https://github.com/throneproj/ThroneForAndroid), the engine and data model this project follows
 
-### License
+Android GUI:
 
-GPL-3.0 — see [LICENSE](LICENSE).
+- [MatsuriDayo/NekoBoxForAndroid](https://github.com/MatsuriDayo/NekoBoxForAndroid)
+- [SagerNet/SagerNet](https://github.com/SagerNet/SagerNet)
+- [shadowsocks/shadowsocks-android](https://github.com/shadowsocks/shadowsocks-android)
+- [giturass/B-box](https://github.com/giturass/B-box), the interface this UI was adapted from
+
+## FAQ
+
+**How does this differ from Throne or NekoBox for Android?** <br/>
+It started as a NekoBox for Android fork; v2.0.0 replaced its core and data model with Throne desktop's. This
+distribution then replaced Throne's own interface with the Flutter one described above — same engine, same
+profile types, share links, route profiles and backup format, one modern screen.
+
+**Where are the downloadable route profiles/rulesets coming from?**<br/>
+They are located at the [routeprofiles](https://github.com/throneproj/routeprofiles) repository, the same one Throne desktop uses.
+
+**Why are some servers skipped when I import a link or a subscription?**<br/>
+As on desktop, Extra Core, Chain and Auto Selector profiles are never imported from links, subscriptions or shared route profiles; create them in the app instead. Nodes the app cannot run are skipped too, and the import reports what was left out.
