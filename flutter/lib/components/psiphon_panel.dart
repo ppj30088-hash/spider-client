@@ -28,6 +28,10 @@ import 'helper_country.dart';
 /// The exit country picker asks Psiphon to leave from that country
 /// (--psiphon-region); changing it while connected restarts the search
 /// under the new filter.
+///
+/// When a start fails, the card keeps the failure and its log lines visible
+/// instead of flipping to Off: the helper is dead, so those lines are the
+/// only thing that says why it died.
 class PsiphonPanel extends StatefulWidget {
   const PsiphonPanel({super.key});
   @override
@@ -257,18 +261,27 @@ class _PsiphonPanelState extends State<PsiphonPanel> {
     final finding = helperReady && selected && (_routeOk == null || !pastStartup);
     final failed = helperReady && selected && _routeOk == false && pastStartup;
     final log = (status?['log'] as List?)?.whereType<String>().toList() ?? [];
+    // A failed start leaves the helper dead, so the card would otherwise
+    // say Off and hide the log lines that say why it died. The native side
+    // keeps the last start failure (message plus log tail) in the status
+    // until the next start or stop; show it while this helper's profile is
+    // selected and the helper is down.
+    final lastError = (status?['lastError'] as String?)?.trim() ?? '';
+    final startFailed = lastError.isNotEmpty && !helperReady && selected;
     final stateText = _error != null
         ? _error!
-        : connected
-            ? context.tr('Connected')
-            : failed
-                ? context.tr('No working route')
-                : finding
-                    ? context.tr('Finding a route…')
-                    : context.tr('Off');
+        : startFailed
+            ? context.tr("Couldn't start")
+            : connected
+                ? context.tr('Connected')
+                : failed
+                    ? context.tr('No working route')
+                    : finding
+                        ? context.tr('Finding a route…')
+                        : context.tr('Off');
     final tone = connected
         ? DashboardChipTone.ok
-        : finding || failed
+        : finding || failed || startFailed
             ? DashboardChipTone.warn
             : DashboardChipTone.idle;
     return BoxPanel(
@@ -302,6 +315,22 @@ class _PsiphonPanelState extends State<PsiphonPanel> {
               style: AppTextStyle.caption1.of(context).copyWith(
                     color: context.colorScheme.onSurfaceVariant,
                   ),
+            ),
+          ],
+          // The full start error, log tail included, kept visible and
+          // selectable so a screenshot or a copy carries the fatal lines.
+          if (startFailed) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 120,
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  lastError,
+                  style: AppTextStyle.caption1.of(context).copyWith(
+                        color: context.colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ),
             ),
           ],
           const SizedBox(height: 12),

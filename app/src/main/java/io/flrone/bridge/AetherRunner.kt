@@ -157,6 +157,21 @@ object AetherRunner {
     @Volatile
     private var watchdogStop = false
 
+    /**
+     * The last helper start failure (message plus the log tail), kept for
+     * the status map: a failed start leaves the helper dead, so the cards
+     * would otherwise flip to Off and hide the very lines that say why it
+     * died. Cleared by the next successful start or stop.
+     */
+    @Volatile
+    private var lastStartError: String? = null
+
+    /** Records a start failure for the status map, then throws it. */
+    private fun failStart(message: String): Nothing {
+        lastStartError = message
+        error(message)
+    }
+
     /** The private dir: identity files and the log. */
     fun dataDir(context: Context = app): File = File(context.filesDir, "aether").apply { mkdirs() }
 
@@ -293,14 +308,14 @@ object AetherRunner {
             // second helper cannot bind there, and waiting for traffic
             // through a stranger's proxy would only time out confusingly.
             if (isPortOpen(port) || (bindPort != port && isPortOpen(bindPort))) {
-                error("Aether could not start: port $port is already in use by another app. Stop that app (or restart the phone) and try again.")
+                failStart("Aether could not start: port $port is already in use by another app. Stop that app (or restart the phone) and try again.")
             }
             val binary = resolveBinary(context)
             val dir = dataDir(context)
             val log = logFile(context)
             val psiphonBin = resolvePsiphonBinary(context)
             if ((mode == Mode.PSIPHON || mode == Mode.CHAIN) && psiphonBin == null) {
-                error("Psiphon is not installed for this device (no libpsiphon.so found)")
+                failStart("Psiphon is not installed for this device (no libpsiphon.so found)")
             }
             val entries = if (mode == Mode.PSIPHON || mode == Mode.CHAIN) ensureServerEntries(context) else null
             val region = DataStore.psiphonRegion.trim().uppercase()
@@ -373,10 +388,11 @@ object AetherRunner {
                     }
                 }
                 val tail = lastLogLines(context)
-                error("Aether stopped while starting" + tail.joinToString("\n", prefix = "\n"))
+                failStart("Aether stopped while starting" + tail.joinToString("\n", prefix = "\n"))
             }
             if (isRouteWorking(port)) {
                 Logs.i("aether: traffic flows through the SOCKS5 proxy at $SOCKS_HOST:$port")
+                lastStartError = null
                 startWatchdog()
                 return statusMap(alreadyRunning = false)
             }
@@ -384,7 +400,7 @@ object AetherRunner {
         }
         stop()
         val tail = lastLogLines(context)
-        error("Aether found no working route in time" + tail.joinToString("\n", prefix = "\n"))
+        failStart("Aether found no working route in time" + tail.joinToString("\n", prefix = "\n"))
     }
 
     /**
@@ -429,6 +445,7 @@ object AetherRunner {
     private fun stopLocked() {
         stopWatchdog()
         currentMode = null
+        lastStartError = null
         val proc = process ?: return
         process = null
         try {
@@ -529,6 +546,7 @@ object AetherRunner {
             "startupMs" to (mode?.let { startupWindowMs(it) } ?: STARTUP_WINDOW_AETHER_MS),
             "uptimeMs" to if (startedAtMs > 0L) System.currentTimeMillis() - startedAtMs else 0L,
             "log" to lastLogLines(),
+            "lastError" to lastStartError,
         )
     }
 
@@ -551,7 +569,7 @@ object AetherRunner {
     private fun resolveBinary(context: Context): File {
         val extracted = File(context.applicationInfo.nativeLibraryDir, "libaether.so")
         if (extracted.isFile && extracted.canExecute()) return extracted
-        error("Aether is not installed for this device (no libaether.so found)")
+        failStart("Aether is not installed for this device (no libaether.so found)")
     }
 
     /**

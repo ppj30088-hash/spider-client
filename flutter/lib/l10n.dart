@@ -353,6 +353,7 @@ const _zh = <String, String>{
   'Connected': '已连接',
   'Finding a route…': '正在寻找路线…',
   'No working route': '无可用路线',
+  "Couldn't start": '无法启动',
   'Try another route': '换条路线',
   'Previous IP': '上一个 IP',
   'New IP': '新 IP',
