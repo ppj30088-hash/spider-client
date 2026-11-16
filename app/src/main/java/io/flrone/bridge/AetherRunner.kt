@@ -1,16 +1,17 @@
 package io.flrone.bridge
 
 import android.content.Context
-import android.os.Build
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.ProxyEntity
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
 import io.nekohasekai.sagernet.outbound.types.Socks
 import java.io.File
+import java.net.HttpURLConnection
 import java.net.InetSocketAddress
+import java.net.Proxy
 import java.net.Socket
-import java.util.zip.ZipFile
+import java.net.URL
 
 /**
  * The Aether helper: a bundled native binary (CluvexStudio/Aether, v2.4.0) that
@@ -25,9 +26,14 @@ import java.util.zip.ZipFile
  *
  * The binary ships per ABI as `libaether.so` in the APK's jniLibs, which the
  * installer extracts to the native library dir (legacy packaging is on, so the
- * files are deflated at install time). When that copy is missing — an install
- * that kept the libraries inside the APK — the same entry is pulled out of the
- * APK zip into the app's private dir instead.
+ * files are deflated at install time).
+ *
+ * The helper runs as a child process of this app, so it shares this UID.
+ * That is why the tunnel must never capture this app (see VpnService):
+ * the helper's own traffic would enter the tunnel, where the core sends it
+ * to its default outbound — the helper's own SOCKS proxy — and loop
+ * forever, which is exactly how registration retried endlessly while no
+ * traffic flowed.
  */
 object AetherRunner {
 
@@ -39,15 +45,30 @@ object AetherRunner {
     const val PROFILE_NAME = "Aether"
 
     /**
-     * How long a start may take: the helper loads its (bundled) identity
-     * and then scans for a route, which on a slow network is tens of
-     * seconds. The UI shows "starting" for this whole window, so it must
-     * be generous rather than exact.
+     * How long a start may take: the first run registers a WARP device and
+     * then scans for a route, which on a slow network is tens of seconds.
+     * The UI shows "starting" for this whole window, so it must be generous
+     * rather than exact.
      */
     private const val START_TIMEOUT_MS = 120_000L
-    private const val POLL_MS = 500L
     private const val STOP_GRACE_MS = 3_000L
     private const val LOG_TAIL_LINES = 8
+
+    /**
+     * What proves the route: a tiny Cloudflare endpoint that answers HTTP
+     * 200 with no body to speak of, fetched through the helper's own proxy.
+     * Each attempt is bounded so a proxy that accepts and never answers
+     * fails fast instead of hanging the start.
+     */
+    private const val VALIDATE_HOST = "www.cloudflare.com"
+    private const val VALIDATE_PATH = "/cdn-cgi/trace"
+    private const val VALIDATE_TIMEOUT_MS = 8_000
+    private const val VALIDATE_RETRY_MS = 2_000L
+
+    /** The watchdog re-checks the route this often while connected. */
+    private const val WATCHDOG_INTERVAL_MS = 15_000L
+    /** Consecutive failed checks before the watchdog rescans. */
+    private const val WATCHDOG_MAX_FAILURES = 2
 
     @Volatile
     private var process: Process? = null
@@ -55,40 +76,16 @@ object AetherRunner {
     @Volatile
     private var startedAtMs: Long = 0L
 
-    /** The private dir: identity files, the log, and the fallback binary copy. */
+    @Volatile
+    private var watchdogThread: Thread? = null
+
+    @Volatile
+    private var watchdogStop = false
+
+    /** The private dir: identity files and the log. */
     fun dataDir(context: Context = app): File = File(context.filesDir, "aether").apply { mkdirs() }
 
     private fun logFile(context: Context = app): File = File(dataDir(context), "aether.log")
-
-    /**
-     * Installs the MASQUE identity the build registered (see the
-     * "Pre-register Aether identity" step in .github/actions/android-build):
-     * a free WARP account registered where the API answers, bundled in the
-     * APK at assets/aether/aether-masque.toml. The phone's network blocks
-     * the registration API, so without this the helper can never get an
-     * account and no route is ever found; with it, the helper loads the
-     * saved identity and never calls the API at all. Only installed when
-     * the phone has no identity of its own yet — an identity the phone
-     * registered itself is never overwritten. A build without the bundled
-     * file (local dev builds) simply falls back to the helper registering
-     * its own account.
-     */
-    private fun ensureBundledIdentity(context: Context) {
-        val dir = dataDir(context)
-        val target = File(dir, "aether-masque.toml")
-        if (target.isFile) return
-        try {
-            context.assets.open("aether/aether-masque.toml").use { input ->
-                target.outputStream().use { input.copyTo(it) }
-            }
-            target.setReadable(true, true)
-            target.setWritable(true, true)
-            target.setExecutable(false, false)
-            Logs.i("aether: installed the bundled masque identity")
-        } catch (_: Exception) {
-            Logs.i("aether: no bundled masque identity; the helper will register one")
-        }
-    }
 
     /** True when the helper process is alive, whatever the port says. */
     fun isProcessAlive(): Boolean = process?.isAlive == true
@@ -103,6 +100,31 @@ object AetherRunner {
 
     /** True when the helper is up and its proxy answers: the connected state. */
     fun isConnected(): Boolean = isProcessAlive() && isPortOpen()
+
+    /**
+     * True when a real request crosses the helper's SOCKS5 proxy and comes
+     * back HTTP 200: the route behind the proxy actually moves traffic. A
+     * port that answers only proves the listener is up — the helper opens
+     * it before any route exists, and a gateway can answer the handshake
+     * and still drop every byte. The request is plain HTTP through the
+     * tunnel, so no TLS is involved, and the host is resolved by the proxy
+     * (remote DNS), not on the phone.
+     */
+    private fun isRouteWorking(): Boolean {
+        return try {
+            val proxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress(SOCKS_HOST, SOCKS_PORT))
+            val conn = URL("http://$VALIDATE_HOST$VALIDATE_PATH").openConnection(proxy) as HttpURLConnection
+            conn.connectTimeout = VALIDATE_TIMEOUT_MS
+            conn.readTimeout = VALIDATE_TIMEOUT_MS
+            conn.requestMethod = "GET"
+            conn.instanceFollowRedirects = false
+            val ok = conn.responseCode == HttpURLConnection.HTTP_OK
+            conn.disconnect()
+            ok
+        } catch (_: Exception) {
+            false
+        }
+    }
 
     /**
      * Whether [profile] is the Aether profile: the stored id first, and the
@@ -123,10 +145,16 @@ object AetherRunner {
 
     /**
      * Starts the helper unless it is already up. Blocks (on the caller's IO
-     * thread) until the SOCKS5 port answers or the start times out; throws with
-     * the helper's last log lines when it dies or never comes up. The process
-     * table is only locked for the hand-over, never for the wait, so the UI's
-     * status polls keep answering while a start scans.
+     * thread) until a real request crosses the proxy and comes back HTTP 200
+     * or the start times out; throws with the helper's last log lines when
+     * it dies or never passes traffic. A port that answers is not enough:
+     * the helper opens its listener before any route exists, and the core
+     * and the VPN come up the moment this returns, so returning early would
+     * put the VPN up over a helper that is still registering and scanning —
+     * and, before the app was excluded from its own tunnel, its traffic
+     * looped back into itself. The process table is only locked for the
+     * hand-over, never for the wait, so the UI's status polls keep answering
+     * while a start scans.
      *
      * The invocation is hardened for strict networks (Aether's own guide
      * prescribes each of these for Iran): HTTP/2 over TCP instead of
@@ -141,11 +169,19 @@ object AetherRunner {
         val proc: Process
         val startMs: Long
         synchronized(this) {
-            if (isConnected()) return statusMap(alreadyRunning = true)
+            if (isConnected()) {
+                startWatchdog()
+                return statusMap(alreadyRunning = true)
+            }
             stopLocked()
+            // Something else is already answering on the helper's port: a
+            // second helper cannot bind there, and waiting for traffic
+            // through a stranger's proxy would only time out confusingly.
+            if (isPortOpen()) {
+                error("Aether could not start: port $SOCKS_PORT is already in use by another app. Stop that app (or restart the phone) and try again.")
+            }
             val binary = resolveBinary(context)
             val dir = dataDir(context)
-            ensureBundledIdentity(context)
             val log = logFile(context)
             val command = buildList {
                 add(binary.absolutePath)
@@ -183,14 +219,16 @@ object AetherRunner {
                 val tail = lastLogLines(context)
                 error("Aether stopped while starting" + tail.joinToString("\n", prefix = "\n"))
             }
-            if (isPortOpen()) {
-                Logs.i("aether: SOCKS5 proxy is up at $SOCKS_HOST:$SOCKS_PORT")
+            if (isRouteWorking()) {
+                Logs.i("aether: traffic flows through the SOCKS5 proxy at $SOCKS_HOST:$SOCKS_PORT")
+                startWatchdog()
                 return statusMap(alreadyRunning = false)
             }
-            Thread.sleep(POLL_MS)
+            Thread.sleep(VALIDATE_RETRY_MS)
         }
         stop()
-        error("Aether did not open its local proxy in time")
+        val tail = lastLogLines(context)
+        error("Aether found no working route in time" + tail.joinToString("\n", prefix = "\n"))
     }
 
     /** Stops the helper and starts it again with a fresh scan, ignoring any cached last-working gateway. */
@@ -205,6 +243,7 @@ object AetherRunner {
     }
 
     private fun stopLocked() {
+        stopWatchdog()
         val proc = process ?: return
         process = null
         try {
@@ -219,6 +258,73 @@ object AetherRunner {
             Logs.w("aether: stop failed: ${error.message}")
         } finally {
             startedAtMs = 0L
+        }
+    }
+
+    /**
+     * Watches the route while the helper is up: nothing else monitors it
+     * once connected, and on phones that kill background processes the
+     * helper can die silently while the card still says Connected. Every
+     * [WATCHDOG_INTERVAL_MS] a real request crosses the proxy; two
+     * consecutive failures rescan from scratch, and a dead process is
+     * restarted. Runs on its own daemon thread and never blocks a start
+     * or a stop: a stop kills the watchdog first, and the watchdog checks
+     * the stop flag — and that it is still the current watchdog thread —
+     * again before restarting or rescanning anything, so a rescan that
+     * replaces the watchdog cannot leave two of them running.
+     */
+    private fun startWatchdog() {
+        synchronized(this) {
+            if (watchdogThread?.isAlive == true) return
+            watchdogStop = false
+            val thread = Thread({
+                val self = Thread.currentThread()
+                var failures = 0
+                while (!watchdogStop && watchdogThread === self) {
+                    try {
+                        Thread.sleep(WATCHDOG_INTERVAL_MS)
+                    } catch (_: InterruptedException) {
+                        break
+                    }
+                    if (watchdogStop || watchdogThread !== self) break
+                    if (!isProcessAlive()) {
+                        Logs.w("aether: helper died; restarting it")
+                        if (watchdogStop || watchdogThread !== self) break
+                        runCatching { start() }
+                            .onFailure { Logs.w("aether: restart failed: ${it.message}") }
+                        failures = 0
+                    } else if (!isRouteWorking()) {
+                        failures++
+                        Logs.w("aether: route check failed $failures/$WATCHDOG_MAX_FAILURES")
+                        if (failures >= WATCHDOG_MAX_FAILURES) {
+                            failures = 0
+                            Logs.w("aether: route dead twice in a row; rescanning")
+                            if (watchdogStop || watchdogThread !== self) break
+                            runCatching { rescan() }
+                                .onFailure { Logs.w("aether: rescan failed: ${it.message}") }
+                        }
+                    } else {
+                        failures = 0
+                    }
+                }
+            }, "aether-watchdog")
+            thread.isDaemon = true
+            watchdogThread = thread
+            thread.start()
+        }
+    }
+
+    private fun stopWatchdog() {
+        synchronized(this) {
+            watchdogStop = true
+            val thread = watchdogThread
+            watchdogThread = null
+            // Never interrupt the calling thread itself: a rescan runs on
+            // the watchdog thread, and an interrupt there would abort the
+            // fresh start's wait instead of stopping the old watchdog.
+            if (thread != null && thread != Thread.currentThread()) {
+                thread.interrupt()
+            }
         }
     }
 
@@ -245,25 +351,15 @@ object AetherRunner {
     }
 
     /**
-     * The executable helper. First the extracted copy in the native library
-     * dir; otherwise the `lib/<abi>/libaether.so` entry is pulled out of the
-     * APK zip into the private dir (and marked executable).
+     * The executable helper: the copy the installer extracted to the native
+     * library dir. That is the only valid location: running a binary out of
+     * the app's private files dir is blocked on Android 10+, so the old
+     * fallback of extracting it from the APK zip there could never execute
+     * and only failed confusingly later.
      */
     private fun resolveBinary(context: Context): File {
         val extracted = File(context.applicationInfo.nativeLibraryDir, "libaether.so")
         if (extracted.isFile && extracted.canExecute()) return extracted
-        val dir = dataDir(context)
-        val fallback = File(dir, "libaether.so")
-        if (fallback.isFile && fallback.canExecute()) return fallback
-        val abis = Build.SUPPORTED_ABIS.toList()
-        ZipFile(File(context.applicationInfo.sourceDir)).use { zip ->
-            for (abi in abis) {
-                val entry = zip.getEntry("lib/$abi/libaether.so") ?: continue
-                zip.getInputStream(entry).use { input -> fallback.outputStream().use { input.copyTo(it) } }
-                fallback.setExecutable(true, true)
-                if (fallback.canExecute()) return fallback
-            }
-        }
         error("Aether is not installed for this device (no libaether.so found)")
     }
 }

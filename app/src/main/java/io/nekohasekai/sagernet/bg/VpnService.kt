@@ -281,6 +281,26 @@ class VpnService : BaseVpnService(),
             // None of the chosen apps is installed: an empty allow list would capture every app instead of none.
             if (added == 0) builder.addAllowedApplication(packageName)
         }
+        // An Aether start runs its helper as a child process of this app, so
+        // the helper shares this UID. When the include list is empty the VPN
+        // captures every app — including this one — and the helper's own
+        // traffic (WARP registration, the route scan, MASQUE) enters the
+        // tunnel, where the core sends it to its default outbound: the
+        // helper's own SOCKS proxy. That loop is why registration retried
+        // forever and no traffic flowed while the card said "connected".
+        // Excluding this app keeps the helper's traffic on the plain
+        // network. Only in the default (no include list) case: Android
+        // rejects combining allowed and disallowed apps, and in include
+        // mode this app is already outside the tunnel. Best effort: a
+        // store hiccup here must not fail the tunnel, it only loses the
+        // exclusion.
+        val aetherActive = runCatching { io.flrone.bridge.AetherProfiles.isSelected() }.getOrDefault(false)
+        if (includePackage.isEmpty() && aetherActive) {
+            try {
+                builder.addDisallowedApplication(packageName)
+            } catch (_: PackageManager.NameNotFoundException) {
+            }
+        }
         options.excludePackage.forEach {
             try {
                 builder.addDisallowedApplication(it)
