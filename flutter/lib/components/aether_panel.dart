@@ -26,9 +26,10 @@ import 'helper_country.dart';
 ///
 /// The "Chain with Psiphon" switch routes through Aether and then Psiphon
 /// (warp -> psiphon -> internet): it connects with the chained profile
-/// instead of the plain Aether one. The exit country picker filters which
-/// country the WARP tunnel must exit from; changing it while connected
-/// rescans with the new filter.
+/// instead of the plain Aether one. While chained, an exit country picker
+/// appears: the chain exits through Psiphon in the chosen country, and
+/// changing it while connected rescans with the new country. Aether alone
+/// has no country picker — it picks the nearest route itself.
 class AetherPanel extends StatefulWidget {
   const AetherPanel({super.key});
   @override
@@ -46,7 +47,8 @@ class _AetherPanelState extends State<AetherPanel> {
   BoxController? _box;
   RoutedIpProbe? _probe;
   bool _chainEnabled = false;
-  String _exitLoc = '';
+  bool _chainSelected = false;
+  String _psiphonRegion = '';
 
   @override
   void initState() {
@@ -86,7 +88,8 @@ class _AetherPanelState extends State<AetherPanel> {
       setState(() {
         _status = status;
         _error = null;
-        _exitLoc = (status['aetherExitLoc'] as String?) ?? '';
+        _psiphonRegion = (status['psiphonRegion'] as String?) ?? '';
+        _chainSelected = chainSelected;
         if (selected) _chainEnabled = chainSelected;
         if (!helperReady || !selected) _routeOk = null;
       });
@@ -216,19 +219,21 @@ class _AetherPanelState extends State<AetherPanel> {
     }
   }
 
-  /// Applies a new exit country. While connected the helper restarts with a
-  /// fresh scan under the new filter (the last gateway was for the old
-  /// country); while off the choice is stored and used on the next connect.
+  /// Applies a new chain exit country (Psiphon's egress region). While
+  /// chained the helper restarts with a fresh scan under the new country;
+  /// while off the choice is stored and used on the next connect. It only
+  /// rescans when actually running chained — changing the country while
+  /// on plain Aether must not restart Aether, which ignores it.
   Future<void> _onCountrySelected(String code) async {
-    if (_busy || code == _exitLoc) return;
+    if (_busy || code == _psiphonRegion) return;
     final box = context.box;
     setState(() {
       _busy = true;
-      _exitLoc = code;
+      _psiphonRegion = code;
     });
     try {
-      await box.helperSetCountries(aetherExitLoc: code);
-      if (box.running) {
+      await box.helperSetCountries(psiphonRegion: code);
+      if (box.running && _chainSelected) {
         setState(() {
           _routeOk = null;
           _lastProbeAt = null;
@@ -330,12 +335,6 @@ class _AetherPanelState extends State<AetherPanel> {
             context.tr('Finds a route by itself — no config needed.'),
             style: context.listCaptionStyle,
           ),
-          const SizedBox(height: 8),
-          HelperCountryPicker(
-            value: _exitLoc,
-            enabled: !_busy,
-            onSelected: _onCountrySelected,
-          ),
           Row(
             children: [
               Expanded(
@@ -359,6 +358,17 @@ class _AetherPanelState extends State<AetherPanel> {
               ),
             ],
           ),
+          // The country picker belongs to the chain, not to Aether alone:
+          // Aether picks the nearest route itself, while the chain exits
+          // through Psiphon in the country chosen here.
+          if (_chainEnabled) ...[
+            const SizedBox(height: 8),
+            HelperCountryPicker(
+              value: _psiphonRegion,
+              enabled: !_busy,
+              onSelected: _onCountrySelected,
+            ),
+          ],
           if ((finding || failed) && log.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(

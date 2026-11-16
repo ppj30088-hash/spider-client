@@ -52,7 +52,6 @@ object Key {
     const val AETHER_PROFILE_ID = "aetherProfileId"
     const val PSIPHON_PROFILE_ID = "psiphonProfileId"
     const val CHAIN_PROFILE_ID = "chainProfileId"
-    const val AETHER_EXIT_LOC = "aetherExitLoc"
     const val PSIPHON_REGION = "psiphonRegion"
     const val PROFILE_GROUP = "profileGroup"
     const val PROFILE_CURRENT = "profileCurrent"

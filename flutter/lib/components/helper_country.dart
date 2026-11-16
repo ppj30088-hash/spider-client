@@ -1,9 +1,8 @@
 import '../widgets.dart';
 
 /// The exit countries the helpers can be asked for: the country codes
-/// Psiphon publishes as egress regions, which are also the realistic
-/// Cloudflare exit countries for Aether's --exit-loc filter. An empty code
-/// means "any country" — the helper picks the fastest route it finds.
+/// Psiphon publishes as egress regions. An empty code means "any country"
+/// — Psiphon picks the fastest route it finds.
 class HelperCountry {
   const HelperCountry(this.code, this.name);
   final String code;

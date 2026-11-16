@@ -380,7 +380,6 @@ class ThroneBoxBridge(
         "aetherSelected" to AetherProfiles.isSelected(),
         "psiphonSelected" to PsiphonProfiles.isPsiphonSelected(),
         "chainSelected" to PsiphonProfiles.isChainSelected(),
-        "aetherExitLoc" to DataStore.aetherExitLoc,
         "psiphonRegion" to DataStore.psiphonRegion,
     )
 
@@ -1106,9 +1105,7 @@ class ThroneBoxBridge(
                 "psiphon.reconnect" -> result.respondIo { AetherRunner.reconnect() }
                 "psiphon.status" -> result.respondIo { helperStatus() }
                 "helper.setCountries" -> result.respondIo {
-                    val exitLoc = call.argument<String>("aetherExitLoc")
                     val region = call.argument<String>("psiphonRegion")
-                    if (exitLoc != null) DataStore.aetherExitLoc = exitLoc.trim().uppercase()
                     if (region != null) DataStore.psiphonRegion = region.trim().uppercase()
                     helperStatus()
                 }

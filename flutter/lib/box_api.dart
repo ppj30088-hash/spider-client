@@ -526,9 +526,9 @@ extension PsiphonApi on BoxController {
   Future<dynamic> psiphonReconnect() => call('psiphon.reconnect');
   /// The helper's state, same map as [aetherStatus].
   Future<dynamic> psiphonStatus() => call('psiphon.status');
-  /// Stores the exit-country filters ("" means any country; null leaves the value alone).
-  Future<dynamic> helperSetCountries({String? aetherExitLoc, String? psiphonRegion}) =>
-      call('helper.setCountries', {'aetherExitLoc': aetherExitLoc, 'psiphonRegion': psiphonRegion});
+  /// Stores the Psiphon exit country ("" means any country; null leaves the value alone).
+  Future<dynamic> helperSetCountries({String? psiphonRegion}) =>
+      call('helper.setCountries', {'psiphonRegion': psiphonRegion});
 }
 
 extension CaptureApi on BoxController {

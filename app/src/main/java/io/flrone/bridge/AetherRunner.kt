@@ -269,9 +269,10 @@ object AetherRunner {
      * also ignores the cached last-working gateway and scans from scratch;
      * without it the helper reconnects to the last gateway that worked.
      *
-     * The country filters come from the store: [DataStore.aetherExitLoc]
-     * (--exit-loc, the WARP exit country) and [DataStore.psiphonRegion]
-     * (--psiphon-region, the Psiphon exit country). Empty means any.
+     * The country filter comes from the store: [DataStore.psiphonRegion]
+     * (--psiphon-region, the country Psiphon must exit from), used in
+     * Psiphon-only and chain mode. Aether alone has no country filter:
+     * it picks the nearest route itself. Empty means any country.
      */
     fun start(context: Context = app, mode: Mode = Mode.AETHER, freshScan: Boolean = false): Map<String, Any?> {
         val proc: Process
@@ -302,7 +303,6 @@ object AetherRunner {
                 error("Psiphon is not installed for this device (no libpsiphon.so found)")
             }
             val entries = if (mode == Mode.PSIPHON || mode == Mode.CHAIN) ensureServerEntries(context) else null
-            val exitLoc = DataStore.aetherExitLoc.trim().uppercase()
             val region = DataStore.psiphonRegion.trim().uppercase()
             val command = buildList {
                 add(binary.absolutePath)
@@ -316,7 +316,6 @@ object AetherRunner {
                         add("--startup-secs"); add("90")
                         add("--validate-secs"); add("20")
                         if (freshScan) add("--no-quick-reconnect")
-                        if (exitLoc.length == 2) { add("--exit-loc"); add(exitLoc) }
                     }
                     Mode.PSIPHON -> {
                         add("--psiphon-only")
@@ -331,7 +330,6 @@ object AetherRunner {
                         add("--startup-secs"); add("90")
                         add("--validate-secs"); add("20")
                         if (freshScan) add("--no-quick-reconnect")
-                        if (exitLoc.length == 2) { add("--exit-loc"); add(exitLoc) }
                         add("--psiphon")
                         add("--psiphon-bind"); add("$SOCKS_HOST:$CHAIN_SOCKS_PORT")
                         if (region.length == 2) { add("--psiphon-region"); add(region) }

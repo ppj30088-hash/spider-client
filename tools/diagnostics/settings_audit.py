@@ -68,8 +68,7 @@ NON_SETTING = {
     "aetherProfileId",          # DataStore.aetherProfileId: the Aether node
     "psiphonProfileId",         # DataStore.psiphonProfileId: the Psiphon node
     "chainProfileId",           # DataStore.chainProfileId: the chained node
-    "aetherExitLoc",            # DataStore.aetherExitLoc: the Aether exit country, picked on the Aether card
-    "psiphonRegion",            # DataStore.psiphonRegion: the Psiphon exit country, picked on the Psiphon card
+    "psiphonRegion",            # DataStore.psiphonRegion: the Psiphon exit country, picked on the Psiphon card and on the Aether card while chained
     "profileCurrent",           # service bookkeeping
     "profileDirty",
     "profileGroup",
