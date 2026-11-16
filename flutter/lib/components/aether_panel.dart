@@ -188,9 +188,18 @@ class _AetherPanelState extends State<AetherPanel> {
     // on its SOCKS port. It says nothing about the route behind it.
     final helperReady = status?['connected'] == true;
     final selected = status?['selected'] == true;
+    // The helper's startup window is 90s: before that it is still setting
+    // up (loading its identity, then scanning), so a failed egress probe
+    // only means "no route yet", not "no route at all". Declaring failure
+    // earlier is how the card said "No working route" while registration
+    // was still retrying. Only after the window may a failed probe mean
+    // failure; the probe keeps running, so a route that comes up late still
+    // flips the card to Connected.
+    final uptimeMs = status?['uptimeMs'] as int?;
+    final pastStartup = uptimeMs != null && uptimeMs >= 90000;
     final connected = helperReady && selected && _routeOk == true;
-    final finding = helperReady && selected && _routeOk == null;
-    final failed = helperReady && selected && _routeOk == false;
+    final finding = helperReady && selected && (_routeOk == null || !pastStartup);
+    final failed = helperReady && selected && _routeOk == false && pastStartup;
     final log = (status?['log'] as List?)?.whereType<String>().toList() ?? [];
     final stateText = _error != null
         ? _error!

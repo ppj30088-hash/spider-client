@@ -39,10 +39,10 @@ object AetherRunner {
     const val PROFILE_NAME = "Aether"
 
     /**
-     * How long a start may take: the first run registers a WARP device and
-     * then scans for a route, which on a slow network is tens of seconds.
-     * The UI shows "starting" for this whole window, so it must be generous
-     * rather than exact.
+     * How long a start may take: the helper loads its (bundled) identity
+     * and then scans for a route, which on a slow network is tens of
+     * seconds. The UI shows "starting" for this whole window, so it must
+     * be generous rather than exact.
      */
     private const val START_TIMEOUT_MS = 120_000L
     private const val POLL_MS = 500L
@@ -59,6 +59,36 @@ object AetherRunner {
     fun dataDir(context: Context = app): File = File(context.filesDir, "aether").apply { mkdirs() }
 
     private fun logFile(context: Context = app): File = File(dataDir(context), "aether.log")
+
+    /**
+     * Installs the MASQUE identity the build registered (see the
+     * "Pre-register Aether identity" step in .github/actions/android-build):
+     * a free WARP account registered where the API answers, bundled in the
+     * APK at assets/aether/aether-masque.toml. The phone's network blocks
+     * the registration API, so without this the helper can never get an
+     * account and no route is ever found; with it, the helper loads the
+     * saved identity and never calls the API at all. Only installed when
+     * the phone has no identity of its own yet — an identity the phone
+     * registered itself is never overwritten. A build without the bundled
+     * file (local dev builds) simply falls back to the helper registering
+     * its own account.
+     */
+    private fun ensureBundledIdentity(context: Context) {
+        val dir = dataDir(context)
+        val target = File(dir, "aether-masque.toml")
+        if (target.isFile) return
+        try {
+            context.assets.open("aether/aether-masque.toml").use { input ->
+                target.outputStream().use { input.copyTo(it) }
+            }
+            target.setReadable(true, true)
+            target.setWritable(true, true)
+            target.setExecutable(false, false)
+            Logs.i("aether: installed the bundled masque identity")
+        } catch (_: Exception) {
+            Logs.i("aether: no bundled masque identity; the helper will register one")
+        }
+    }
 
     /** True when the helper process is alive, whatever the port says. */
     fun isProcessAlive(): Boolean = process?.isAlive == true
@@ -115,6 +145,7 @@ object AetherRunner {
             stopLocked()
             val binary = resolveBinary(context)
             val dir = dataDir(context)
+            ensureBundledIdentity(context)
             val log = logFile(context)
             val command = buildList {
                 add(binary.absolutePath)

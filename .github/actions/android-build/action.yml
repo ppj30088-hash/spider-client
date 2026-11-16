@@ -115,6 +115,60 @@ runs:
         check app/src/main/assets/sb-dashboard
         [ "$missing" = 0 ] || exit 1
         echo "Reused CI build inputs are complete."
+    # Aether's WARP registration calls api.devices.cloudflare.com, which the
+    # phone's network blocks, so the helper can never get an account there
+    # (pre.16 failed on "registration retry 2/4"). Register the MASQUE
+    # identity here, on the runner, where the API answers, and bundle it in
+    # the APK: the phone then loads the saved identity and never calls the
+    # API at all (verified: with the API forced unreachable, the helper logs
+    # "loaded existing masque identity" and goes straight to scanning, with
+    # zero registration attempts). The identity is a free, disposable WARP
+    # account (device id + token + WireGuard/MASQUE keys); it is generated
+    # fresh on every run, lives only on the runner and inside the built APK,
+    # and is never committed — app/src/main/assets/aether/ is gitignored.
+    # The certificate is good for 365 days, so a release stays usable long
+    # after its build. The build fails if registration fails, so a release
+    # can never ship without the identity.
+    - name: Pre-register Aether identity
+      shell: bash
+      run: |
+        set -euo pipefail
+        AETHER_VERSION=2.4.0
+        WORK="$RUNNER_TEMP/aether-identity"
+        mkdir -p "$WORK"
+        cd "$WORK"
+        for attempt in 1 2 3; do
+          if curl -fsSL -o aether-linux.tar.gz "https://github.com/CluvexStudio/Aether/releases/download/v${AETHER_VERSION}/aether-linux-x86_64.tar.gz" \
+            && curl -fsSL -o SHA256SUMS.txt "https://github.com/CluvexStudio/Aether/releases/download/v${AETHER_VERSION}/SHA256SUMS.txt"; then
+            break
+          fi
+          if [ "$attempt" = "3" ]; then
+            echo "::error::aether $AETHER_VERSION failed to download three times"
+            exit 1
+          fi
+          sleep 20
+        done
+        EXPECTED=$(awk '$2 == "aether-linux-x86_64.tar.gz" { print $1 }' SHA256SUMS.txt)
+        test -n "$EXPECTED"
+        ACTUAL=$(sha256sum aether-linux.tar.gz | cut -d' ' -f1)
+        if [ "$ACTUAL" != "$EXPECTED" ]; then
+          echo "::error::aether download checksum mismatch"
+          exit 1
+        fi
+        tar xzf aether-linux.tar.gz aether
+        ./aether --register masque --config "$WORK/aether.toml" --log-level info
+        test -s "$WORK/aether-masque.toml"
+        # Field names only: the file holds account secrets and must never be
+        # printed. A missing field means registration produced a useless file.
+        for field in device_id access_token cert_pem key_pem cert_issued_at wg_private_key wg_peer_public_key; do
+          grep -q "^$field =" "$WORK/aether-masque.toml" || {
+            echo "::error::pre-registered masque identity is missing $field"
+            exit 1
+          }
+        done
+        mkdir -p "$GITHUB_WORKSPACE/app/src/main/assets/aether"
+        cp "$WORK/aether-masque.toml" "$GITHUB_WORKSPACE/app/src/main/assets/aether/aether-masque.toml"
+        echo "Pre-registered Aether MASQUE identity bundled for the APK."
     - name: Gradle build
       shell: bash
       env:
