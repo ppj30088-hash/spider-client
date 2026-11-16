@@ -503,14 +503,32 @@ extension ServiceApi on BoxController {
 extension AetherApi on BoxController {
   /// Creates the Aether group and SOCKS profile when missing; returns their ids.
   Future<dynamic> aetherEnsure() => call('aether.ensure');
-  /// Starts the helper binary when the selected profile is Aether; a no-op otherwise.
+  /// Starts the helper binary when the selected profile is a helper profile (Aether, Psiphon or chain); a no-op otherwise.
   Future<dynamic> aetherStart() => call('aether.start');
   /// Stops the helper when it runs; a no-op otherwise.
   Future<dynamic> aetherStop() => call('aether.stop');
   /// Restarts the helper with a fresh scan, ignoring any cached last-working gateway.
   Future<dynamic> aetherRescan() => call('aether.rescan');
+  /// Restarts the helper letting it reconnect to the last gateway that worked.
+  Future<dynamic> aetherReconnect() => call('aether.reconnect');
   /// The helper's state: process, proxy, uptime and last log lines.
   Future<dynamic> aetherStatus() => call('aether.status');
+}
+
+extension PsiphonApi on BoxController {
+  /// Creates the Psiphon group and SOCKS profile when missing; returns their ids.
+  Future<dynamic> psiphonEnsure() => call('psiphon.ensure');
+  /// Creates the Chain group and chained SOCKS profile when missing; returns their ids.
+  Future<dynamic> psiphonEnsureChain() => call('psiphon.ensureChain');
+  /// Restarts the helper with a fresh scan, ignoring any cached last-working gateway.
+  Future<dynamic> psiphonRescan() => call('psiphon.rescan');
+  /// Restarts the helper letting it reconnect to the last gateway that worked.
+  Future<dynamic> psiphonReconnect() => call('psiphon.reconnect');
+  /// The helper's state, same map as [aetherStatus].
+  Future<dynamic> psiphonStatus() => call('psiphon.status');
+  /// Stores the exit-country filters ("" means any country; null leaves the value alone).
+  Future<dynamic> helperSetCountries({String? aetherExitLoc, String? psiphonRegion}) =>
+      call('helper.setCountries', {'aetherExitLoc': aetherExitLoc, 'psiphonRegion': psiphonRegion});
 }
 
 extension CaptureApi on BoxController {

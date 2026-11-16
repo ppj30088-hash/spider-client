@@ -37,6 +37,12 @@ class _StatusPanelState extends State<StatusPanel> with WidgetsBindingObserver {
   final _detailsRevision = ValueNotifier(0);
   int _generation = 0;
   bool _foreground = true, _refreshScheduled = false;
+  // The Aether (and chained) profile hides this card's "Check failed":
+  // the helper's own card already validates the route with the same egress
+  // check and shows the real state ("Finding a route…", "No working
+  // route", "Connected"), so this card's failure line is only noise there.
+  // Every other profile keeps the current behaviour.
+  bool _aetherHidesCheck = false;
   bool _ipDue = true,
       _qualityDue = false,
       _manual = false,
@@ -116,6 +122,26 @@ class _StatusPanelState extends State<StatusPanel> with WidgetsBindingObserver {
       });
     }
     _scheduleRefresh();
+    _refreshHelperCheck();
+  }
+
+  /// Asks the native side which helper profile is selected, so this card
+  /// knows whether its "Check failed" line is hidden (Aether and chain
+  /// only). A failed read leaves the previous value: the card still shows
+  /// the check rather than hiding it on a guess.
+  Future<void> _refreshHelperCheck() async {
+    final box = _box;
+    if (box == null || box.remote) return;
+    try {
+      final status = json(await box.aetherStatus());
+      if (!mounted) return;
+      setState(() {
+        _aetherHidesCheck =
+            status['aetherSelected'] == true || status['chainSelected'] == true;
+      });
+    } catch (_) {
+      // Keep the previous value.
+    }
   }
 
   void _scheduleRefresh() {
@@ -509,15 +535,18 @@ class _StatusPanelState extends State<StatusPanel> with WidgetsBindingObserver {
                                               style: ipStyle,
                                             )
                                           : Text(
-                                              _error == null
+                                              _error == null ||
+                                                      _aetherHidesCheck
                                                   ? '—'
                                                   : context.tr('Check failed'),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: ipStyle.copyWith(
-                                                color: _error == null
-                                                    ? foreground
-                                                    : color.error,
+                                                color:
+                                                    _error == null ||
+                                                            _aetherHidesCheck
+                                                        ? foreground
+                                                        : color.error,
                                               ),
                                             ),
                                     ),
@@ -526,7 +555,9 @@ class _StatusPanelState extends State<StatusPanel> with WidgetsBindingObserver {
                                   SizedBox(
                                     height: 28,
                                     child: ClipRect(
-                                      child: _error != null && ip == null
+                                      child: _error != null &&
+                                              ip == null &&
+                                              !_aetherHidesCheck
                                           ? Align(
                                               alignment: AlignmentDirectional
                                                   .centerStart,

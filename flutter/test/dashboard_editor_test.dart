@@ -15,7 +15,11 @@ void main() {
   ]) {
     testWidgets('dashboard edits $card in place: $scenario', (tester) async {
       reportFlutterErrors();
-      tester.view.physicalSize = const Size(360, 800);
+      // Tall enough for the default rows to be built at once: the editor is
+      // a lazy list, and a card below the fold (Network speed sits under
+      // Aether and Psiphon by default) has no drag handle or Remove button
+      // until it is scrolled into view.
+      tester.view.physicalSize = const Size(360, 1400);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -126,9 +130,10 @@ void main() {
         final order = preferences['dashboardCards'] as List;
         expect(order.indexOf(card), lessThan(order.indexOf('Status')));
       } else {
-        if (systemProxy && scenario == 'add-remove') {
-          await revealControl(find.byTooltip('Remove $card'), 250);
-        }
+        // The editor is a lazy list: a card below the fold has no Remove
+        // button built until it is scrolled into view, so always reveal the
+        // row first (Network speed sits under Aether and Psiphon by default).
+        await revealControl(find.byTooltip('Remove $card'), 250);
         await tester.tap(find.byTooltip('Remove $card'));
         await advance();
         expect(find.byTooltip('Remove $card'), findsNothing);

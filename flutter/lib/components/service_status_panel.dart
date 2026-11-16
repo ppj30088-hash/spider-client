@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../widgets.dart';
 import '../common/routed_ip_probe.dart';
 import 'dashboard_chip.dart';
@@ -20,6 +22,10 @@ class _ServiceStatusPanelState extends State<ServiceStatusPanel> {
   bool _checking = false;
   int _generation = 0;
   RoutedIpProbe? _probe;
+  // Same suppression as the Status card: the Aether (and chained) profile
+  // hides "Check failed" here too — the helper's own card already validates
+  // the route and shows the real state. Every other profile keeps it.
+  bool _aetherHidesCheck = false;
 
   @override
   void initState() {
@@ -27,6 +33,24 @@ class _ServiceStatusPanelState extends State<ServiceStatusPanel> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _check();
     });
+  }
+
+  /// Asks the native side which helper profile is selected. A failed read
+  /// leaves the previous value: the card still shows the check rather than
+  /// hiding it on a guess.
+  Future<void> _refreshHelperCheck() async {
+    final box = context.box;
+    if (box.remote) return;
+    try {
+      final status = json(await box.aetherStatus());
+      if (!mounted) return;
+      setState(() {
+        _aetherHidesCheck =
+            status['aetherSelected'] == true || status['chainSelected'] == true;
+      });
+    } catch (_) {
+      // Keep the previous value.
+    }
   }
 
   @override
@@ -46,6 +70,7 @@ class _ServiceStatusPanelState extends State<ServiceStatusPanel> {
     final probe = RoutedIpProbe(context.box);
     _probe?.cancel();
     _probe = probe;
+    unawaited(_refreshHelperCheck());
     try {
       final result = await probe.egress(force: force);
       if (!mounted || generation != _generation) return;
@@ -118,7 +143,7 @@ class _ServiceStatusPanelState extends State<ServiceStatusPanel> {
                 context.tr(
                   _checking
                       ? 'Loading'
-                      : _error != null
+                      : _error != null && !_aetherHidesCheck
                       ? 'Check failed'
                       : 'Unreachable',
                 ),

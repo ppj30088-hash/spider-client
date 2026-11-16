@@ -42,6 +42,18 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     /** The profile id of the Aether helper (a SOCKS5 profile at 127.0.0.1:1819), 0 when none was created yet. */
     var aetherProfileId by configurationStore.long(Key.AETHER_PROFILE_ID)
 
+    /** The profile id of the Psiphon helper (a SOCKS5 profile at 127.0.0.1:1820), 0 when none was created yet. */
+    var psiphonProfileId by configurationStore.long(Key.PSIPHON_PROFILE_ID)
+
+    /** The profile id of the chained helper (a SOCKS5 profile at 127.0.0.1:1821), 0 when none was created yet. */
+    var chainProfileId by configurationStore.long(Key.CHAIN_PROFILE_ID)
+
+    /** Aether's exit-country filter (--exit-loc): "" means any country. */
+    var aetherExitLoc by configurationStore.string(Key.AETHER_EXIT_LOC)
+
+    /** Psiphon's exit country (--psiphon-region): "" means whichever Psiphon considers best. */
+    var psiphonRegion by configurationStore.string(Key.PSIPHON_REGION)
+
     // only in bg process
     var vpnService: VpnService? = null
     var baseService: BaseService.Interface? = null

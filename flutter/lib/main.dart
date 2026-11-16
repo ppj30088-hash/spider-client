@@ -16,7 +16,7 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   LicenseRegistry.addLicense(() async* {
-    for (final entry in const {'FlClash': 'LICENSE', 'Aether': 'aether-LICENSE.txt', 'cilium/ebpf': 'cilium-ebpf-LICENSE', 'ulikunitz/xz': 'xz-LICENSE', 'JetBrains Mono': 'JetBrainsMono-OFL.txt'}.entries) {
+    for (final entry in const {'FlClash': 'LICENSE', 'Aether': 'aether-LICENSE.txt', 'Psiphon': 'psiphon-LICENSE.txt', 'cilium/ebpf': 'cilium-ebpf-LICENSE', 'ulikunitz/xz': 'xz-LICENSE', 'JetBrains Mono': 'JetBrainsMono-OFL.txt'}.entries) {
       yield LicenseEntryWithLineBreaks([entry.key], await rootBundle.loadString('assets/licenses/${entry.value}'));
     }
   });

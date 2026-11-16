@@ -37,6 +37,7 @@ import moe.matsuri.nb4a.utils.LogRedactor
 import moe.matsuri.nb4a.utils.CoreLog
 import io.flrone.bridge.AetherProfiles
 import io.flrone.bridge.AetherRunner
+import io.flrone.bridge.PsiphonProfiles
 import io.flrone.bridge.BboxActions
 import io.flrone.bridge.BboxApi
 import io.flrone.bridge.BboxApps
@@ -366,6 +367,22 @@ class ThroneBoxBridge(
             }
         }
     }
+
+    /**
+     * The helper status every helper card polls: the runner's state (mode,
+     * port, startup window, log lines) plus which helper profile is selected
+     * and the two country filters. "selected" is kept for the Aether card
+     * (Aether profile only); the mode-specific flags let the Psiphon card
+     * and the Status card tell the helpers apart.
+     */
+    private fun helperStatus(): Map<String, Any?> = AetherRunner.status() + mapOf(
+        "selected" to AetherProfiles.isSelected(),
+        "aetherSelected" to AetherProfiles.isSelected(),
+        "psiphonSelected" to PsiphonProfiles.isPsiphonSelected(),
+        "chainSelected" to PsiphonProfiles.isChainSelected(),
+        "aetherExitLoc" to DataStore.aetherExitLoc,
+        "psiphonRegion" to DataStore.psiphonRegion,
+    )
 
     /**
      * Starts the background service and, in VPN mode, waits until it exists before answering.
@@ -1055,15 +1072,23 @@ class ThroneBoxBridge(
                 "config.warpParams" -> result.success(
                     WarpClient.registerParams(call.argument<String>("tunnelType").orEmpty()),
                 )
-                // Aether: the helper process and its profile. `start` blocks
-                // until the local SOCKS5 proxy answers (or fails with the
+                // Aether / Psiphon / chain: the helper process and its profiles.
+                // `start` dispatches on the selected profile (Aether -> warp,
+                // Psiphon -> psiphon-only, chain -> warp -> psiphon) and blocks
+                // until the mode's local SOCKS5 proxy answers (or fails with the
                 // helper's last log lines); the Dart start calls it before the
                 // core comes up, and `stop` is a no-op when nothing runs.
+                // `rescan` restarts the running mode with a fresh scan (a new
+                // IP); `reconnect` restarts it letting it reconnect to the last
+                // gateway that worked (the previous IP). `status` carries the
+                // runner's state plus which helper profile is selected and the
+                // country filters, so the cards can render without extra calls.
                 "aether.ensure" -> result.respondIo { AetherProfiles.ensure() }
                 "aether.start" -> result.respondIo {
                     val profile = SagerDatabase.proxyDao.getById(DataStore.selectedProxy)
-                    if (profile != null && AetherRunner.isAetherProfile(profile)) {
-                        AetherRunner.start()
+                    val mode = profile?.let { AetherRunner.modeForProfile(it) }
+                    if (profile != null && mode != null) {
+                        AetherRunner.start(mode = mode)
                     } else {
                         mapOf("needed" to false, "running" to AetherRunner.isProcessAlive())
                     }
@@ -1073,8 +1098,19 @@ class ThroneBoxBridge(
                     mapOf("running" to false)
                 }
                 "aether.rescan" -> result.respondIo { AetherRunner.rescan() }
-                "aether.status" -> result.respondIo {
-                    AetherRunner.status() + mapOf("selected" to AetherProfiles.isSelected())
+                "aether.reconnect" -> result.respondIo { AetherRunner.reconnect() }
+                "aether.status" -> result.respondIo { helperStatus() }
+                "psiphon.ensure" -> result.respondIo { PsiphonProfiles.ensurePsiphon() }
+                "psiphon.ensureChain" -> result.respondIo { PsiphonProfiles.ensureChain() }
+                "psiphon.rescan" -> result.respondIo { AetherRunner.rescan() }
+                "psiphon.reconnect" -> result.respondIo { AetherRunner.reconnect() }
+                "psiphon.status" -> result.respondIo { helperStatus() }
+                "helper.setCountries" -> result.respondIo {
+                    val exitLoc = call.argument<String>("aetherExitLoc")
+                    val region = call.argument<String>("psiphonRegion")
+                    if (exitLoc != null) DataStore.aetherExitLoc = exitLoc.trim().uppercase()
+                    if (region != null) DataStore.psiphonRegion = region.trim().uppercase()
+                    helperStatus()
                 }
                 "state.setMode" -> {
                     BboxKernel.setMode(call.argument<String>("mode") ?: error("Missing mode"))
