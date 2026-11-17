@@ -130,11 +130,13 @@ class BboxFlutterActivity : FlutterFragmentActivity(), OnPreferenceDataStoreChan
      */
     @androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.S)
     private fun fadeSplashOnExit() {
-        splashScreen.setOnExitAnimationListener { provider ->
-            provider.view.animate()
+        // The listener hands over the splash view itself (a FrameLayout),
+        // so it fades directly; there is no separate `.view` on it.
+        splashScreen.setOnExitAnimationListener { splashView ->
+            splashView.animate()
                 .alpha(0f)
                 .setDuration(300L)
-                .withEndAction { provider.remove() }
+                .withEndAction { splashView.remove() }
                 .start()
         }
     }
