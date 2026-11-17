@@ -17,7 +17,7 @@ void main() {
       reportFlutterErrors();
       // Tall enough for the default rows to be built at once: the editor is
       // a lazy list, and a card below the fold (Network speed sits under
-      // Aether and Psiphon by default) has no drag handle or Remove button
+      // the Connection card by default) has no drag handle or Remove button
       // until it is scrolled into view.
       tester.view.physicalSize = const Size(360, 1400);
       tester.view.devicePixelRatio = 1;
@@ -91,8 +91,8 @@ void main() {
       if (scenario == 'reorder') {
         // The rows follow the page's shown order: the saved list, or the
         // defaults when the test leaves it unset. The card under test is not
-        // always second (Aether sits between Status and the rest by default),
-        // so take the handle at the card's own position.
+        // always second (the Connection card sits between Status and the
+        // rest by default), so take the handle at the card's own position.
         final shown = (preferences['dashboardCards'] as List?)?.cast<String>() ?? defaultDashboardCards;
         final handle = find.byType(ReorderableDelayedDragStartListener).at(shown.indexOf(card));
         // The centre of this tall card can sit behind the navigation bar.
@@ -132,7 +132,7 @@ void main() {
       } else {
         // The editor is a lazy list: a card below the fold has no Remove
         // button built until it is scrolled into view, so always reveal the
-        // row first (Network speed sits under Aether and Psiphon by default).
+        // row first (Network speed sits under the Connection card by default).
         await revealControl(find.byTooltip('Remove $card'), 250);
         await tester.tap(find.byTooltip('Remove $card'));
         await advance();

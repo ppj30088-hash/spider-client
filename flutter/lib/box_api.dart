@@ -504,7 +504,9 @@ extension AetherApi on BoxController {
   /// Creates the Aether group and SOCKS profile when missing; returns their ids.
   Future<dynamic> aetherEnsure() => call('aether.ensure');
   /// Starts the helper binary when the selected profile is a helper profile (Aether, Psiphon or chain); a no-op otherwise.
-  Future<dynamic> aetherStart() => call('aether.start');
+  /// [freshScan] starts with a fresh scan instead of reconnecting to the last gateway that worked.
+  Future<dynamic> aetherStart({bool freshScan = false}) =>
+      call('aether.start', {'freshScan': freshScan});
   /// Stops the helper when it runs; a no-op otherwise.
   Future<dynamic> aetherStop() => call('aether.stop');
   /// Restarts the helper with a fresh scan, ignoring any cached last-working gateway.

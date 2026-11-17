@@ -1087,7 +1087,12 @@ class ThroneBoxBridge(
                     val profile = SagerDatabase.proxyDao.getById(DataStore.selectedProxy)
                     val mode = profile?.let { AetherRunner.modeForProfile(it) }
                     if (profile != null && mode != null) {
-                        AetherRunner.start(mode = mode)
+                        // The Connection card's "Start with" choice, once:
+                        // a fresh scan, or the last route that worked.
+                        AetherRunner.start(
+                            mode = mode,
+                            freshScan = call.argument<Boolean>("freshScan") == true,
+                        )
                     } else {
                         mapOf("needed" to false, "running" to AetherRunner.isProcessAlive())
                     }

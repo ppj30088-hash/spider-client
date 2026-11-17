@@ -6,8 +6,8 @@ import '../widgets.dart';
 import '../components/dashboard_editor.dart';
 
 import '../components/connected_buttons.dart';
-import '../components/aether_panel.dart';
-import '../components/psiphon_panel.dart';
+import '../components/connection_panel.dart';
+import '../components/dashboard_entrance.dart';
 import '../components/status_panel.dart';
 import '../components/memory_panel.dart';
 import '../components/speed_gauge.dart';
@@ -19,12 +19,19 @@ import '../components/system_proxy_panel.dart';
 
 export '../components/dashboard_editor.dart' show DashboardEditor;
 
-const dashboardCards = ['Status', 'Aether', 'Psiphon', 'Network speed', 'Outbound mode', 'Current profile', 'Proxy groups', 'Memory', 'Intranet IP', 'Network takeover', 'Service status'];
-const defaultDashboardCards = ['Status', 'Aether', 'Psiphon', 'Network speed', 'Outbound mode', 'Current profile', 'Proxy groups'];
+const dashboardCards = ['Status', 'Connection', 'Network speed', 'Outbound mode', 'Current profile', 'Proxy groups', 'Memory', 'Intranet IP', 'Network takeover', 'Service status'];
+const defaultDashboardCards = ['Status', 'Connection', 'Network speed', 'Outbound mode', 'Current profile', 'Proxy groups'];
 const defaultHiddenCards = ['Memory', 'Intranet IP'];
 
 List<String> dashboardOrder(Json prefs) {
-  final saved = (prefs['dashboardCards'] as List? ?? defaultDashboardCards).whereType<String>().where(dashboardCards.contains).toList();
+  // The old Aether and Psiphon cards merged into the one Connection card:
+  // a saved order still naming them maps onto it in place, so the merged
+  // card keeps its position instead of dropping to the bottom.
+  final saved = (prefs['dashboardCards'] as List? ?? defaultDashboardCards)
+      .whereType<String>()
+      .map((card) => card == 'Aether' || card == 'Psiphon' ? 'Connection' : card)
+      .where(dashboardCards.contains)
+      .toList();
   return {...saved, ...dashboardCards}.toList();
 }
 
@@ -48,8 +55,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final showServiceStatus = box.capabilities.known && box.capabilities.of('serviceStatus') && !hidden.contains('Service status');
     return <String, Widget>{
       'Status': const StatusPanel(),
-      'Aether': const AetherPanel(),
-      'Psiphon': const PsiphonPanel(),
+      'Connection': const ConnectionPanel(),
       if (showServiceStatus) 'Service status': const ServiceStatusPanel(),
       if (box.capabilities.of('lanProxy')) 'Intranet IP': const IntranetPanel(),
       'Network speed': const _SpeedPanel(),
@@ -104,14 +110,14 @@ class _DashboardPageState extends State<DashboardPage> {
               cardKeyOf: _keyOf, cardBuilder: (card) => cards[card]!, padding: padding, gap: gap,
               onChanged: _saveLayout, onBusyChanged: (busy) { if (mounted) setState(() => _saving = busy); },
               onDone: () { if (mounted) setState(() => _editing = false); })
-            else SliverPadding(padding: padding, sliver: SliverToBoxAdapter(child: Column(spacing: gap, children: [
+            else SliverPadding(padding: padding, sliver: SliverToBoxAdapter(child: DashboardEntrance(child: Column(spacing: gap, children: [
               if (box.remote) ListItem(title: Text(box.dashboard['remote'].toString()), subtitle: Text(context.tr('Remote control')),
                 trailing: TextButton(onPressed: () => box.remoteDisconnect(), child: Text(context.tr('Disconnect')))),
               if (box.running && box.applyRequired != null) const _RestartHint(),
               for (final card in shown) RepaintBoundary(key: _keyOf(card), child: cards[card]),
               for (final note in rows(box.dashboard['deprecated'])) ListItem(title: Text(note['message'].toString()),
                 onTap: note['url'] == null ? null : () => box.openUrl(note['url'])),
-            ]))),
+            ])))),
           ],
         );
       }),

@@ -193,6 +193,13 @@ class BoxController extends ChangeNotifier {
   bool ready = false;
   bool lanChanging = false;
   bool serviceSettingsChanging = false;
+
+  /// One-shot: the next core start brings the helper up with a fresh scan
+  /// (ignoring the cached last-working gateway) instead of reconnecting
+  /// to it. Set by the Connection card from its "Start with" choice just
+  /// before a connect or a mode switch; the start consumes and clears it,
+  /// so a later restart the user did not ask for scans normally again.
+  bool helperFreshStart = false;
   String? startupError;
   final pendingIntents = <String>[];
   String? applyRequired;

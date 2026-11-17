@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launch screen: the spider emblem centered on black, shown while
+     Flutter starts, so the app never opens on a white or blank screen.
+     The Flutter embedding keeps this drawable up until the first frame;
+     on Android 12+ the system splash (Theme.SagerNet's
+     windowSplashScreen* items) shows the same picture first. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@android:color/black" />
+    <item
+        android:width="192dp"
+        android:height="192dp"
+        android:gravity="center">
+        <bitmap android:src="@mipmap/ic_launcher_foreground" />
+    </item>
+</layer-list>

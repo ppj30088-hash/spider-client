@@ -42,8 +42,12 @@ void main() {
       Finder button(int index) => find.byWidgetPredicate((widget) =>
         widget is DashboardConnectedButton && widget.semanticLabel == labels[index]);
       bool selected(int index) => tester.widget<DashboardConnectedButton>(button(index)).selected;
-      expect(tester.widgetList<DashboardConnectedButton>(find.byType(DashboardConnectedButton))
-        .map((widget) => widget.semanticLabel), [labels[2], labels[1], labels[0]]);
+      // The Connection card above reuses the same connected-button style,
+      // so only the buttons carrying an outbound-mode label count here.
+      Iterable<DashboardConnectedButton> modeButtons([List<String> extra = const []]) =>
+        tester.widgetList<DashboardConnectedButton>(find.byType(DashboardConnectedButton))
+          .where((widget) => labels.contains(widget.semanticLabel) || extra.contains(widget.semanticLabel));
+      expect(modeButtons().map((widget) => widget.semanticLabel), [labels[2], labels[1], labels[0]]);
       for (final (index, glyph) in [AppGlyphs.rules, AppGlyphs.proxies, AppGlyphs.target].indexed) {
         expect(find.descendant(of: button(index), matching: find.byWidgetPredicate((widget) =>
           widget is GlyphIcon && widget.glyph == glyph)), findsOneWidget);
@@ -72,14 +76,13 @@ void main() {
 
       events.add({'type': 'dashboard', 'value': {'status': 'Started', 'modes': ['Maintenance', 'Direct'], 'mode': 'direct'}});
       await tester.pumpAndSettle();
-      expect(tester.widgetList<DashboardConnectedButton>(find.byType(DashboardConnectedButton))
-        .map((widget) => widget.semanticLabel), ['Maintenance', labels[2]]);
+      expect(modeButtons(['Maintenance']).map((widget) => widget.semanticLabel), ['Maintenance', labels[2]]);
       expect(selected(2), true);
       expect(button(0), findsNothing);
       expect(button(1), findsNothing);
       events.add({'type': 'dashboard', 'value': {'status': 'Started', 'modes': []}});
       await tester.pumpAndSettle();
-      expect(find.byType(DashboardConnectedButton), findsNothing);
+      expect(modeButtons(['Maintenance']), isEmpty);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       await events.close();

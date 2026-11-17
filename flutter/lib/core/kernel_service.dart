@@ -502,7 +502,12 @@ class KernelService {
       // An Aether start brings its helper binary up first: the core's SOCKS
       // outbound only answers while the helper process runs. A no-op when the
       // selected profile is not Aether; a failure aborts the start below.
-      await box.call('aether.start');
+      // The Connection card's "Start with" choice rides along once: a fresh
+      // scan, or the last route that worked. Consumed here so a later
+      // restart the user did not ask for scans normally again.
+      final freshScan = box.helperFreshStart;
+      box.helperFreshStart = false;
+      await box.call('aether.start', {'freshScan': freshScan});
       final readyMs = clock.elapsedMilliseconds;
       final handle = await worker.createInstance(built);
       _instanceHandle = handle;

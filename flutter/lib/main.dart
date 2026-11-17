@@ -143,9 +143,15 @@ class _BoxAppState extends State<BoxApp> with WidgetsBindingObserver {
           bannerTopInset: media.padding.top + pageToolbarHeight,
           bannerKey: _banner,
           home: widget.controller.ready ? const HomePage() : Surface(
-            color: context.colorScheme.surface,
+            // The launch screen while the bridge answers `ready`: the
+            // spider on black, the same picture the native splash shows
+            // until the first frame, so the app opens on the emblem and
+            // fades into the dashboard instead of a spinner on a blank
+            // surface. No waiting is added: this is only the time the
+            // app actually needs to start.
+            color: const Color(0xFF000000),
             child: SafeArea(child: Center(child: widget.controller.startupError == null
-                ? const ActivityIndicator()
+                ? Image.asset('assets/images/app_icon.webp', width: 192, height: 192)
                 : ErrorState(widget.controller.startupError!, retry: widget.controller.initialize))),
           ),
         );

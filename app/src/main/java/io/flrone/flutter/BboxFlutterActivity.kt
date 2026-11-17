@@ -103,6 +103,13 @@ class BboxFlutterActivity : FlutterFragmentActivity(), OnPreferenceDataStoreChan
     private var wifiWaiting = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // The Android 12+ splash exits with a short fade into the first
+        // Flutter frame instead of a hard cut. The platform only lets one
+        // exit listener exist: if the Flutter embedding sets its own
+        // later, that one wins and this is a no-op.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            fadeSplashOnExit()
+        }
         super.onCreate(savedInstanceState)
         // The switch is written through the bridge, so the change arrives here rather than at the next
         // resume: the task leaves the recents list the moment the user turns it on.
@@ -110,6 +117,25 @@ class BboxFlutterActivity : FlutterFragmentActivity(), OnPreferenceDataStoreChan
         if (savedInstanceState == null) {
             firstStart.start()
             if (intent?.getBooleanExtra(PlatformNotifications.EXTRA_WIFI_PERMISSION, false) == true) startWifiFlow()
+        }
+    }
+
+    /**
+     * Fades the Android 12+ system splash out over 300 ms when it exits
+     * instead of letting it vanish in one frame. The view must be removed
+     * by hand once the fade ends, or the splash would stay on screen.
+     * No-op below Android 12: there the splash is the window background,
+     * and the first Flutter frame is the black spider splash fading into
+     * the dashboard instead.
+     */
+    @androidx.annotation.RequiresApi(android.os.Build.VERSION_CODES.S)
+    private fun fadeSplashOnExit() {
+        splashScreen.setOnExitAnimationListener { provider ->
+            provider.view.animate()
+                .alpha(0f)
+                .setDuration(300L)
+                .withEndAction { provider.remove() }
+                .start()
         }
     }
 
